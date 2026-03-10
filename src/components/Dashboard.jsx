@@ -58,8 +58,10 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
   const [showDetails, setShowDetails] = useState(false)
   const [modal, setModal] = useState(null) // 'pay' | 'transfer'
 
-  // Last 2 transactions (most recent first)
-  const recent = [...transactions].reverse().slice(0, 2)
+  // Last 2 transactions (most recent date first)
+  const recent = [...transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 2)
 
   return (
     <div className="app">

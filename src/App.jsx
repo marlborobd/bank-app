@@ -110,7 +110,7 @@ function getSeedBalance() {
   return SEED_BALANCE
 }
 
-const SEED_VERSION = 'v3'
+const SEED_VERSION = 'v4'
 
 function loadTransactions(seedBal) {
   try {
