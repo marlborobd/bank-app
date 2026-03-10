@@ -110,17 +110,24 @@ function getSeedBalance() {
   return SEED_BALANCE
 }
 
+const SEED_VERSION = 'v2'
+
 function loadTransactions(seedBal) {
   try {
-    const stored = localStorage.getItem('bankTransactions')
-    if (stored) {
-      const parsed = JSON.parse(stored)
+    const savedVersion = localStorage.getItem('bankDataVersion')
+    const savedTransactions = localStorage.getItem('bankTransactions')
+    if (savedVersion === SEED_VERSION && savedTransactions) {
+      const parsed = JSON.parse(savedTransactions)
       if (Array.isArray(parsed) && parsed.length > 0) {
         return recalcBalances(parsed, seedBal)
       }
     }
   } catch { /* ignore */ }
-  return recalcBalances(SEED_TRANSACTIONS, seedBal)
+  // Version changed or no data — reset to full seed
+  const seeded = recalcBalances(SEED_TRANSACTIONS, seedBal)
+  localStorage.setItem('bankTransactions', JSON.stringify(seeded))
+  localStorage.setItem('bankDataVersion', SEED_VERSION)
+  return seeded
 }
 
 export default function App() {
