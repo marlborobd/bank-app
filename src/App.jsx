@@ -110,7 +110,7 @@ function getSeedBalance() {
   return SEED_BALANCE
 }
 
-const SEED_VERSION = 'v2'
+const SEED_VERSION = 'v3'
 
 function loadTransactions(seedBal) {
   try {
@@ -139,12 +139,26 @@ export default function App() {
     localStorage.setItem('bankTransactions', JSON.stringify(transactions))
   }, [transactions])
 
-  const currentBalance = transactions.length > 0
-    ? transactions[transactions.length - 1].balance
-    : seedBal
+  const currentBalance = parseFloat(
+    (seedBal + transactions.reduce((sum, tx) => sum + tx.amount, 0)).toFixed(2)
+  )
+
+  const insertByDate = (txArray, newTx) => {
+    const newDate = new Date(newTx.date)
+    const index = txArray.findIndex(tx => new Date(tx.date) < newDate)
+    if (index === -1) return [...txArray, newTx]
+    const result = [...txArray]
+    result.splice(index, 0, newTx)
+    return result
+  }
 
   const addTransaction = (tx) => {
-    setTransactions(prev => recalcBalances([...prev, { ...tx, id: Date.now() }], seedBal))
+    const newTx = { ...tx, id: Date.now() }
+    setTransactions(prev => recalcBalances(insertByDate(prev, newTx), seedBal))
+  }
+
+  const deleteTransaction = (id) => {
+    setTransactions(prev => recalcBalances(prev.filter(tx => tx.id !== id), seedBal))
   }
 
   const handleLogin = () => {
@@ -164,6 +178,8 @@ export default function App() {
       currentBalance={currentBalance}
       onBack={() => setPage('dashboard')}
       onLogout={handleLogout}
+      onDeleteTransaction={deleteTransaction}
+      seedBalance={seedBal}
     />
   )
   return (

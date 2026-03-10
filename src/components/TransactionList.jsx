@@ -19,7 +19,7 @@ function formatAmount(n) {
   }).format(n)
 }
 
-// SVG Icons
+// ── SVG Icons (unchanged) ──────────────────────────────────────────
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <circle cx="11" cy="11" r="7" stroke="#003087" strokeWidth="2.2"/>
@@ -46,20 +46,87 @@ const ChevronDown = () => (
   </svg>
 )
 
-export default function TransactionList({ transactions, currentBalance, onBack, onLogout }) {
+// ── Feature 1: Delete Confirmation Modal ──────────────────────────
+function DeleteModal({ tx, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Delete Transaction?</span>
+          <button className="modal-close" onClick={onCancel}>✕</button>
+        </div>
+
+        <div className="del-info">
+          <div className="del-info__row">
+            <span className="del-info__key">Description</span>
+            <span className="del-info__val">{tx.description}</span>
+          </div>
+          <div className="del-info__row">
+            <span className="del-info__key">Date</span>
+            <span className="del-info__val">{fmt(tx.date)}</span>
+          </div>
+          <div className="del-info__row">
+            <span className="del-info__key">Amount</span>
+            <span className={`del-info__val ${tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red'}`}>
+              {tx.amount >= 0 ? '+' : ''}{formatAmount(tx.amount)}
+            </span>
+          </div>
+        </div>
+
+        <div className="del-modal-btns">
+          <button className="del-cancel-btn" onClick={onCancel}>Cancel</button>
+          <button className="del-confirm-btn" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────
+export default function TransactionList({
+  transactions,
+  currentBalance,
+  onBack,
+  onLogout,
+  onDeleteTransaction,
+  seedBalance,
+}) {
   const [filter, setFilter] = useState('All transactions')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchText, setSearchText] = useState('')
+  // Feature 2: sort direction
+  const [sortDesc, setSortDesc] = useState(true)
+  // Feature 1: selected transaction for delete modal
+  const [selectedTx, setSelectedTx] = useState(null)
 
-  // Newest first
-  const reversed = [...transactions].reverse()
+  // Build chronological balance map (oldest → newest)
+  const chronological = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date))
+  let running = seedBalance
+  const balanceMap = {}
+  chronological.forEach(tx => {
+    running = parseFloat((running + tx.amount).toFixed(2))
+    balanceMap[tx.id] = running
+  })
 
-  const visible = reversed.filter(tx => {
+  // Feature 2: sort for display
+  const sorted = [...transactions].sort((a, b) => {
+    const dateA = new Date(a.date)
+    const dateB = new Date(b.date)
+    return sortDesc ? dateB - dateA : dateA - dateB
+  })
+
+  const visible = sorted.filter(tx => {
     const matchesType = filter === 'All transactions' || tx.type === filter
     const matchesSearch = !searchText || tx.description.toLowerCase().includes(searchText.toLowerCase())
     return matchesType && matchesSearch
   })
+
+  // Feature 1: handle delete confirm
+  const handleDeleteConfirm = () => {
+    onDeleteTransaction(selectedTx.id)
+    setSelectedTx(null)
+  }
 
   const exportPDF = () => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -97,8 +164,8 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
     doc.text('Balance', cols.balance, y)
     y += 14
 
-    // Rows (oldest first for PDF)
-    const pdfRows = [...transactions]
+    // Rows (oldest first for PDF) — use chronological balanceMap
+    const pdfRows = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date))
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     pdfRows.forEach((tx, i) => {
@@ -116,7 +183,7 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
       doc.setTextColor(tx.amount >= 0 ? 46 : 200, tx.amount >= 0 ? 125 : 50, tx.amount >= 0 ? 50 : 50)
       doc.text(amtStr, cols.amount, y)
       doc.setTextColor(50, 50, 50)
-      doc.text(formatAmount(tx.balance), cols.balance, y)
+      doc.text(formatAmount(balanceMap[tx.id] ?? 0), cols.balance, y)
       y += 18
     })
 
@@ -197,6 +264,16 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
               </div>
             </div>
 
+            {/* Feature 2: Sort toggle */}
+            <div style={{ padding: '0 18px 10px' }}>
+              <button
+                className="sort-toggle-btn"
+                onClick={() => setSortDesc(p => !p)}
+              >
+                {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
+              </button>
+            </div>
+
             {/* Search bar */}
             {showSearch && (
               <div className="txns-search-bar">
@@ -217,9 +294,13 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
               <div className="txns-empty">No transactions found.</div>
             )}
 
+            {/* Feature 1 + 2 + 3: clickable rows, sorted, chronological balance */}
             {visible.map((tx, i) => (
               <div key={tx.id}>
-                <div className="txn-block">
+                <div
+                  className="txn-block txn-block--clickable"
+                  onClick={() => setSelectedTx(tx)}
+                >
                   <div className="txn-block__row">
                     <span className="txn-block__key">Date</span>
                     <span className="txn-block__val">{fmt(tx.date)}</span>
@@ -240,7 +321,7 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
                   </div>
                   <div className="txn-block__row">
                     <span className="txn-block__key">Balance</span>
-                    <span className="txn-block__val">{formatAmount(tx.balance)}</span>
+                    <span className="txn-block__val">{formatAmount(balanceMap[tx.id] ?? 0)}</span>
                   </div>
                 </div>
                 {i < visible.length - 1 && <hr className="txns-divider" />}
@@ -251,6 +332,15 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
 
         <BottomNav onBack={onBack} />
       </div>
+
+      {/* Feature 1: Delete confirmation modal */}
+      {selectedTx && (
+        <DeleteModal
+          tx={selectedTx}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setSelectedTx(null)}
+        />
+      )}
     </div>
   )
 }

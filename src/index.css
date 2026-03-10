@@ -490,3 +490,61 @@ button { cursor: pointer; }
 }
 .filter-dropdown__item:hover { background: #f0f4ff; }
 .filter-dropdown__item--selected { color: #003087; font-weight: 700; background: #f0f4ff; }
+
+/* ── Feature 2: Sort Toggle ── */
+.sort-toggle-btn {
+  background: #f0f4ff;
+  border: 1.5px solid #d0d9f0;
+  border-radius: 20px;
+  color: #003087;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  transition: background 0.15s;
+}
+.sort-toggle-btn:hover { background: #dde5ff; }
+
+/* ── Feature 1: Clickable transaction row ── */
+.txn-block--clickable { cursor: pointer; transition: background 0.12s; border-radius: 4px; }
+.txn-block--clickable:hover { background: #f8faff; }
+
+/* ── Feature 1: Delete modal ── */
+.del-info {
+  background: #f8faff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+}
+.del-info__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+}
+.del-info__key { font-size: 12px; color: #888; }
+.del-info__val { font-size: 13px; color: #1a1a2e; font-weight: 600; text-align: right; max-width: 65%; word-break: break-word; }
+.del-modal-btns { display: flex; gap: 10px; }
+.del-cancel-btn {
+  flex: 1;
+  padding: 12px;
+  background: #f0f0f0;
+  color: #444;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.del-cancel-btn:hover { background: #e0e0e0; }
+.del-confirm-btn {
+  flex: 1;
+  padding: 12px;
+  background: #d32f2f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+.del-confirm-btn:hover { background: #b71c1c; }
