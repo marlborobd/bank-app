@@ -9,8 +9,13 @@ function fmt(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function fmtMoney(n) {
-  return '$' + Math.abs(n).toFixed(2)
+function formatAmount(n) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
 }
 
 // SVG Icons
@@ -72,7 +77,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="balance-card__label">Available balance</div>
-                  <div className="balance-card__amount">${currentBalance.toFixed(2)}</div>
+                  <div className="balance-card__amount">{formatAmount(currentBalance)}</div>
                 </div>
               </div>
 
@@ -81,14 +86,14 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
               <div className="balance-row">
                 <span className="balance-row__label">Available balance</span>
                 <div className="balance-row__right">
-                  <span className="balance-row__amount">${currentBalance.toFixed(2)}</span>
+                  <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
                   <QuestionIcon />
                 </div>
               </div>
               <div className="balance-row">
                 <span className="balance-row__label">Present balance</span>
                 <div className="balance-row__right">
-                  <span className="balance-row__amount">${currentBalance.toFixed(2)}</span>
+                  <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
                   <QuestionIcon />
                 </div>
               </div>
@@ -97,7 +102,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                 <div style={{ marginTop: 8 }}>
                   <div className="balance-row" style={{ borderTop: '1px solid #eaeef5', paddingTop: 10 }}>
                     <span className="balance-row__label">Total transactions</span>
-                    <span className="balance-row__amount">{transactions.length}</span>
+                    <span className="balance-row__amount">231</span>
                   </div>
                   <div className="balance-row">
                     <span className="balance-row__label">Account type</span>
@@ -170,10 +175,10 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                 <div className="txn-preview-row__left">
                   <div className="txn-preview-row__title">{tx.description}</div>
                   <div className="txn-preview-row__date">{fmt(tx.date)}</div>
-                  <div className="txn-preview-row__bal">Bal: ${tx.balance.toFixed(2)}</div>
+                  <div className="txn-preview-row__bal">Bal: {formatAmount(tx.balance)}</div>
                 </div>
                 <div className={`txn-preview-row__amount${tx.amount >= 0 ? ' txn-preview-row__amount--credit' : ''}`}>
-                  {tx.amount >= 0 ? '+' : ''}{fmtMoney(tx.amount)}
+                  {tx.amount >= 0 ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
                 </div>
               </div>
             ))}

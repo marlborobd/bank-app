@@ -10,6 +10,15 @@ function fmt(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatAmount(n) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
+}
+
 // SVG Icons
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -103,11 +112,11 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
       const descClipped = tx.description.length > 25 ? tx.description.slice(0, 23) + '…' : tx.description
       doc.text(descClipped, cols.desc, y)
       doc.text(tx.type || '', cols.type, y)
-      const amtStr = (tx.amount >= 0 ? '+$' : '-$') + Math.abs(tx.amount).toFixed(2)
+      const amtStr = (tx.amount >= 0 ? '+' : '') + formatAmount(tx.amount)
       doc.setTextColor(tx.amount >= 0 ? 46 : 200, tx.amount >= 0 ? 125 : 50, tx.amount >= 0 ? 50 : 50)
       doc.text(amtStr, cols.amount, y)
       doc.setTextColor(50, 50, 50)
-      doc.text('$' + tx.balance.toFixed(2), cols.balance, y)
+      doc.text(formatAmount(tx.balance), cols.balance, y)
       y += 18
     })
 
@@ -116,7 +125,7 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
     doc.setTextColor(0, 48, 135)
-    doc.text(`Current Balance: $${currentBalance.toFixed(2)}`, margin, y)
+    doc.text(`Current Balance: ${formatAmount(currentBalance)}`, margin, y)
 
     y += 30
     doc.setFont('helvetica', 'italic')
@@ -226,12 +235,12 @@ export default function TransactionList({ transactions, currentBalance, onBack, 
                   <div className="txn-block__row">
                     <span className="txn-block__key">Amount</span>
                     <span className={`txn-block__val ${tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red'}`}>
-                      {tx.amount >= 0 ? '+$' : '-$'}{Math.abs(tx.amount).toFixed(2)}
+                      {tx.amount >= 0 ? '+' : ''}{formatAmount(tx.amount)}
                     </span>
                   </div>
                   <div className="txn-block__row">
                     <span className="txn-block__key">Balance</span>
-                    <span className="txn-block__val">${tx.balance.toFixed(2)}</span>
+                    <span className="txn-block__val">{formatAmount(tx.balance)}</span>
                   </div>
                 </div>
                 {i < visible.length - 1 && <hr className="txns-divider" />}
