@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
 import './index.css'
 
-const SEED_BALANCE = 182.58
+const SEED_BALANCE = 322511800.60
 
 const SEED_TRANSACTIONS = [
   {
@@ -46,8 +46,6 @@ function loadSession() {
 }
 
 function getSeedBalance() {
-  const stored = localStorage.getItem('bankSeedBalance')
-  if (stored) return parseFloat(stored)
   localStorage.setItem('bankSeedBalance', String(SEED_BALANCE))
   return SEED_BALANCE
 }
