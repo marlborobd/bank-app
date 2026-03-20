@@ -1,7 +1,6 @@
 import { useState } from 'react'
 
 const TODAY = new Date().toISOString().split('T')[0]
-const WIRE_FEE = 45.00
 
 // ── Data ─────────────────────────────────────────────────────────────
 const CURRENCIES = [
@@ -146,7 +145,7 @@ function maskAccount(val) {
   return '•'.repeat(stripped.length - 4) + stripped.slice(-4)
 }
 
-// ── Searchable Select ─────────────────────────────────────────────────
+// ── Searchable Select — defined OUTSIDE to prevent re-mount on parent re-render ──
 function SearchableSelect({ options, value, onChange, placeholder, error }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -164,7 +163,10 @@ function SearchableSelect({ options, value, onChange, placeholder, error }) {
         onClick={() => { setOpen(o => !o); setSearch('') }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {selected ? `${selected.flag}  ${selected.code} — ${selected.name}` : <span style={{ color: '#aaa' }}>{placeholder}</span>}
+          {selected
+            ? `${selected.flag}  ${selected.code} — ${selected.name}`
+            : <span style={{ color: '#aaa' }}>{placeholder}</span>
+          }
         </span>
         <span style={{ color: '#888', fontSize: 11, flexShrink: 0 }}>▾</span>
       </button>
@@ -211,7 +213,7 @@ function SearchableSelect({ options, value, onChange, placeholder, error }) {
   )
 }
 
-// ── Progress Bar ──────────────────────────────────────────────────────
+// ── Progress Bar — defined OUTSIDE to prevent re-mount ───────────────
 function WireProgress({ step }) {
   const steps = ['Fill Form', 'Review', 'Confirm', 'Done']
   const activeIdx = step === 'form' ? 0 : step === 'review' ? 1 : step === 'confirm' ? 2 : 3
@@ -234,8 +236,24 @@ function WireProgress({ step }) {
   )
 }
 
+// ── Field wrapper — defined OUTSIDE to prevent re-mount on every keystroke ──
+function WireField({ label, children, err, tooltip }) {
+  return (
+    <div>
+      <div className="wire-label-row">
+        <span className="wire-label-text">{label}</span>
+        {tooltip && (
+          <span className="wire-tooltip" data-tip={tooltip}>?</span>
+        )}
+      </div>
+      {children}
+      {err && <div className="wire-error-text">{err}</div>}
+    </div>
+  )
+}
+
 // ── Main Export ───────────────────────────────────────────────────────
-export default function TransferModal({ onClose, onAdd }) {
+export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const [tab, setTab] = useState('deposit')
 
   // Deposit / Withdraw state
@@ -281,10 +299,9 @@ export default function TransferModal({ onClose, onAdd }) {
   const [wireReference, setWireReference] = useState('')
   const [wireInternalRef, setWireInternalRef] = useState('')
 
-  // Compliance
+  // Compliance (2 checkboxes — fee checkbox removed)
   const [chk1, setChk1] = useState(false)
   const [chk2, setChk2] = useState(false)
-  const [chk3, setChk3] = useState(false)
 
   // Validation errors
   const [wireErrors, setWireErrors] = useState({})
@@ -294,7 +311,6 @@ export default function TransferModal({ onClose, onAdd }) {
   const rate = selCurrency?.rate || 1
   const amountNum = parseFloat(wireAmount) || 0
   const recipientReceives = amountNum * rate
-  const totalDebited = amountNum + WIRE_FEE
 
   const ibanStripped = ibanValue.replace(/\s/g, '')
   const expectedIbanLen = IBAN_LENGTHS[recipientCountry]
@@ -302,7 +318,6 @@ export default function TransferModal({ onClose, onAdd }) {
   const swiftValid = swiftCode.length >= 8 && validateSWIFT(swiftCode)
 
   const selRecipientCountry = COUNTRIES.find(c => c.code === recipientCountry)
-  const selBankCountry = COUNTRIES.find(c => c.code === bankCountry)
 
   // ── Deposit / Withdraw submit ────────────────────────────────────
   const handleSubmit = (e) => {
@@ -340,17 +355,14 @@ export default function TransferModal({ onClose, onAdd }) {
       if (accountNumber !== confirmAccount) errs.confirmAccount = 'Account numbers do not match'
     }
     if (!wirePurpose) errs.wirePurpose = 'Required'
-    if (!chk1 || !chk2 || !chk3) errs.compliance = 'All three checkboxes must be checked'
+    if (!chk1 || !chk2) errs.compliance = 'All checkboxes must be checked'
     setWireErrors(errs)
     return Object.keys(errs).length === 0
   }
 
   const handleWireReview = () => {
     if (validateWire()) setWireStep('review')
-    else {
-      // scroll to top of modal
-      document.querySelector('.modal-sheet--wide')?.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    else document.querySelector('.modal-sheet--wide')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleWireConfirm = () => {
@@ -362,12 +374,6 @@ export default function TransferModal({ onClose, onAdd }) {
       amount: -amountNum,
       date: wireDate,
     })
-    onAdd({
-      description: 'INTERNATIONAL WIRE TRANSFER FEE',
-      type: 'Fee',
-      amount: -WIRE_FEE,
-      date: wireDate,
-    })
     setWireStep('done')
   }
 
@@ -377,20 +383,6 @@ export default function TransferModal({ onClose, onAdd }) {
     setWireStep('form')
     setWireErrors({})
   }
-
-  // ── Field helper ─────────────────────────────────────────────────
-  const F = ({ label, children, err, tooltip }) => (
-    <div>
-      <div className="wire-label-row">
-        <span className="wire-label-text">{label}</span>
-        {tooltip && (
-          <span className="wire-tooltip" data-tip={tooltip}>?</span>
-        )}
-      </div>
-      {children}
-      {err && <div className="wire-error-text">{err}</div>}
-    </div>
-  )
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -460,9 +452,6 @@ export default function TransferModal({ onClose, onAdd }) {
               <div className="wire-warning-amber">
                 ⚠ International wires cannot be cancelled once submitted. Please review all details carefully before submitting.
               </div>
-              <div className="wire-fee-notice">
-                💳 Wire Transfer Fee: <strong>$45.00</strong> will be debited from your selected account
-              </div>
             </div>
 
             <WireProgress step={wireStep} />
@@ -476,15 +465,19 @@ export default function TransferModal({ onClose, onAdd }) {
                     <div className="wire-section__title">1. Your Account</div>
                   </div>
                   <div className="wire-section__body">
-                    <div style={{ marginBottom: 14 }}>
+                    <div style={{ marginBottom: 16 }}>
                       <div className="wire-label-text" style={{ marginBottom: 5 }}>From Account</div>
-                      <div className="modal-input" style={{ background: 'var(--gray-bg)', color: 'var(--text-dark)', display: 'flex', justifyContent: 'space-between' }}>
+                      <div className="modal-input" style={{ background: 'var(--gray-bg)', color: 'var(--text-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>BUS COMP... (...9193) — Business Checking</span>
-                        <span style={{ color: 'var(--gray-text)', fontSize: 12 }}>Available</span>
                       </div>
+                      {currentBalance != null && (
+                        <div style={{ fontSize: 12, color: 'var(--gray-text)', marginTop: 5 }}>
+                          Available balance: <strong>{fmtUSD(currentBalance)}</strong>
+                        </div>
+                      )}
                     </div>
 
-                    <F label="Amount to Send ($)" err={wireErrors.wireAmount}>
+                    <WireField label="Amount to Send ($)" err={wireErrors.wireAmount}>
                       <div className="wire-amount-row">
                         <input
                           className={`modal-input${wireErrors.wireAmount ? ' wire-input--error' : ''}`}
@@ -494,9 +487,14 @@ export default function TransferModal({ onClose, onAdd }) {
                         />
                         <span className="wire-currency-label">USD</span>
                       </div>
-                    </F>
+                      {currentBalance != null && (
+                        <div style={{ fontSize: 12, color: 'var(--gray-text)', marginTop: -10, marginBottom: 10 }}>
+                          Amount to send cannot exceed available balance ({fmtUSD(currentBalance)})
+                        </div>
+                      )}
+                    </WireField>
 
-                    <F label="Currency to Deliver" err={wireErrors.wireCurrency}>
+                    <WireField label="Currency to Deliver" err={wireErrors.wireCurrency}>
                       <SearchableSelect
                         options={CURRENCIES}
                         value={wireCurrency}
@@ -504,40 +502,24 @@ export default function TransferModal({ onClose, onAdd }) {
                         placeholder="Select currency…"
                         error={wireErrors.wireCurrency}
                       />
-                    </F>
+                    </WireField>
 
-                    {wireCurrency && selCurrency && (
+                    {selCurrency && (
                       <div className="wire-rate-box">
                         ℹ️ &nbsp;1 USD = <strong>{selCurrency.rate} {selCurrency.code}</strong> — Rate valid for 30 minutes
                       </div>
                     )}
 
                     {amountNum > 0 && (
-                      <>
-                        <div style={{ marginBottom: 14 }}>
-                          <div className="wire-label-text" style={{ marginBottom: 5 }}>Recipient Receives (estimated)</div>
-                          <input
-                            className="modal-input"
-                            readOnly
-                            value={fmtForeign(recipientReceives, wireCurrency)}
-                            style={{ background: 'var(--gray-bg)', color: 'var(--gray-text)' }}
-                          />
-                        </div>
-                        <div style={{ borderTop: '1px solid var(--gray-border)', paddingTop: 12, marginTop: 4 }}>
-                          <div className="wire-fee-row">
-                            <span>Transfer Amount</span>
-                            <span>{fmtUSD(amountNum)}</span>
-                          </div>
-                          <div className="wire-fee-row">
-                            <span>Wire Transfer Fee</span>
-                            <span>{fmtUSD(WIRE_FEE)}</span>
-                          </div>
-                          <div className="wire-total-row">
-                            <span>Total Debited</span>
-                            <span>{fmtUSD(totalDebited)}</span>
-                          </div>
-                        </div>
-                      </>
+                      <div style={{ marginBottom: 14 }}>
+                        <div className="wire-label-text" style={{ marginBottom: 5 }}>Recipient Receives (estimated)</div>
+                        <input
+                          className="modal-input"
+                          readOnly
+                          value={fmtForeign(recipientReceives, wireCurrency)}
+                          style={{ background: 'var(--gray-bg)', color: 'var(--gray-text)' }}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -548,62 +530,62 @@ export default function TransferModal({ onClose, onAdd }) {
                     <div className="wire-section__title">2. Recipient Information</div>
                   </div>
                   <div className="wire-section__body">
-                    <F label="Recipient Full Name (as it appears on bank account)" err={wireErrors.recipientName}>
+                    <WireField label="Recipient Full Name (as it appears on bank account)" err={wireErrors.recipientName}>
                       <input
                         className={`modal-input${wireErrors.recipientName ? ' wire-input--error' : ''}`}
                         placeholder="Full legal name"
                         value={recipientName}
                         onChange={e => { setRecipientName(e.target.value); setWireErrors(p => ({ ...p, recipientName: '' })) }}
                       />
-                    </F>
+                    </WireField>
 
-                    <F label="Address Line 1" err={wireErrors.recipientAddr1}>
+                    <WireField label="Address Line 1" err={wireErrors.recipientAddr1}>
                       <input
                         className={`modal-input${wireErrors.recipientAddr1 ? ' wire-input--error' : ''}`}
                         placeholder="Street address"
                         value={recipientAddr1}
                         onChange={e => { setRecipientAddr1(e.target.value); setWireErrors(p => ({ ...p, recipientAddr1: '' })) }}
                       />
-                    </F>
+                    </WireField>
 
-                    <F label="Address Line 2 (optional)">
+                    <WireField label="Address Line 2 (optional)">
                       <input
                         className="modal-input"
                         placeholder="Apartment, suite, unit, etc."
                         value={recipientAddr2}
                         onChange={e => setRecipientAddr2(e.target.value)}
                       />
-                    </F>
+                    </WireField>
 
                     <div className="wire-grid-2">
-                      <F label="City" err={wireErrors.recipientCity}>
+                      <WireField label="City" err={wireErrors.recipientCity}>
                         <input
                           className={`modal-input${wireErrors.recipientCity ? ' wire-input--error' : ''}`}
                           placeholder="City"
                           value={recipientCity}
                           onChange={e => { setRecipientCity(e.target.value); setWireErrors(p => ({ ...p, recipientCity: '' })) }}
                         />
-                      </F>
-                      <F label="State / Province / Region">
+                      </WireField>
+                      <WireField label="State / Province / Region">
                         <input
                           className="modal-input"
                           placeholder="State or region"
                           value={recipientState}
                           onChange={e => setRecipientState(e.target.value)}
                         />
-                      </F>
+                      </WireField>
                     </div>
 
                     <div className="wire-grid-2">
-                      <F label="Postal Code">
+                      <WireField label="Postal Code">
                         <input
                           className="modal-input"
                           placeholder="Postal / ZIP code"
                           value={recipientPostal}
                           onChange={e => setRecipientPostal(e.target.value)}
                         />
-                      </F>
-                      <F label="Recipient Country" err={wireErrors.recipientCountry}>
+                      </WireField>
+                      <WireField label="Recipient Country" err={wireErrors.recipientCountry}>
                         <SearchableSelect
                           options={COUNTRIES}
                           value={recipientCountry}
@@ -611,7 +593,7 @@ export default function TransferModal({ onClose, onAdd }) {
                           placeholder="Select country…"
                           error={wireErrors.recipientCountry}
                         />
-                      </F>
+                      </WireField>
                     </div>
                   </div>
                 </div>
@@ -623,15 +605,15 @@ export default function TransferModal({ onClose, onAdd }) {
                   </div>
                   <div className="wire-section__body">
                     <div className="wire-grid-2">
-                      <F label="Bank Name" err={wireErrors.bankName}>
+                      <WireField label="Bank Name" err={wireErrors.bankName}>
                         <input
                           className={`modal-input${wireErrors.bankName ? ' wire-input--error' : ''}`}
                           placeholder="e.g. Deutsche Bank"
                           value={bankName}
                           onChange={e => { setBankName(e.target.value); setWireErrors(p => ({ ...p, bankName: '' })) }}
                         />
-                      </F>
-                      <F label="Bank Country" err={wireErrors.bankCountry}>
+                      </WireField>
+                      <WireField label="Bank Country" err={wireErrors.bankCountry}>
                         <SearchableSelect
                           options={COUNTRIES}
                           value={bankCountry}
@@ -639,29 +621,29 @@ export default function TransferModal({ onClose, onAdd }) {
                           placeholder="Select country…"
                           error={wireErrors.bankCountry}
                         />
-                      </F>
+                      </WireField>
                     </div>
 
                     <div className="wire-grid-2">
-                      <F label="Bank Address">
+                      <WireField label="Bank Address">
                         <input
                           className="modal-input"
                           placeholder="Bank street address"
                           value={bankAddress}
                           onChange={e => setBankAddress(e.target.value)}
                         />
-                      </F>
-                      <F label="Bank City">
+                      </WireField>
+                      <WireField label="Bank City">
                         <input
                           className="modal-input"
                           placeholder="Bank city"
                           value={bankCity}
                           onChange={e => setBankCity(e.target.value)}
                         />
-                      </F>
+                      </WireField>
                     </div>
 
-                    <F
+                    <WireField
                       label="SWIFT / BIC Code"
                       err={wireErrors.swiftCode}
                       tooltip="The SWIFT/BIC code identifies your recipient's bank internationally. Find it on their bank statement or website."
@@ -681,7 +663,7 @@ export default function TransferModal({ onClose, onAdd }) {
                         Format: AAAABBCC or AAAABBCCXXX (8 or 11 characters)
                         {swiftValid && <span style={{ color: 'var(--success)', marginLeft: 8 }}>✓ Valid</span>}
                       </div>
-                    </F>
+                    </WireField>
 
                     {/* Account type toggle */}
                     <div style={{ marginBottom: 5 }}>
@@ -693,7 +675,7 @@ export default function TransferModal({ onClose, onAdd }) {
                           onClick={() => setAccountType('iban')}
                         >
                           <input type="radio" readOnly checked={accountType === 'iban'} style={{ accentColor: 'var(--chase-blue)' }} />
-                          IBAN <span style={{ fontSize: 11, fontWeight: 400, color: 'inherit' }}>(Europe, Middle East)</span>
+                          IBAN <span style={{ fontSize: 11, fontWeight: 400 }}>(Europe, Middle East)</span>
                         </button>
                         <button
                           type="button"
@@ -701,13 +683,13 @@ export default function TransferModal({ onClose, onAdd }) {
                           onClick={() => setAccountType('account')}
                         >
                           <input type="radio" readOnly checked={accountType === 'account'} style={{ accentColor: 'var(--chase-blue)' }} />
-                          Account Number <span style={{ fontSize: 11, fontWeight: 400, color: 'inherit' }}>(US, Asia)</span>
+                          Account Number <span style={{ fontSize: 11, fontWeight: 400 }}>(US, Asia)</span>
                         </button>
                       </div>
                     </div>
 
                     {accountType === 'iban' && (
-                      <F label="" err={wireErrors.ibanValue}>
+                      <WireField label="" err={wireErrors.ibanValue}>
                         <div className="wire-iban-row">
                           <input
                             className={`modal-input${wireErrors.ibanValue ? ' wire-input--error' : ''}`}
@@ -715,8 +697,7 @@ export default function TransferModal({ onClose, onAdd }) {
                             placeholder="e.g. RO49 AAAA 1B31 0075 9384 0000"
                             value={ibanValue}
                             onChange={e => {
-                              const formatted = formatIBAN(e.target.value)
-                              setIbanValue(formatted)
+                              setIbanValue(formatIBAN(e.target.value))
                               setWireErrors(p => ({ ...p, ibanValue: '' }))
                             }}
                           />
@@ -728,27 +709,27 @@ export default function TransferModal({ onClose, onAdd }) {
                             {ibanStripped.length > 0 && ` (${ibanStripped.length} entered)`}
                           </div>
                         )}
-                      </F>
+                      </WireField>
                     )}
 
                     {accountType === 'account' && (
                       <>
-                        <F label="Account Number" err={wireErrors.accountNumber}>
+                        <WireField label="Account Number" err={wireErrors.accountNumber}>
                           <input
                             className={`modal-input${wireErrors.accountNumber ? ' wire-input--error' : ''}`}
                             placeholder="Account number"
                             value={accountNumber}
                             onChange={e => { setAccountNumber(e.target.value); setWireErrors(p => ({ ...p, accountNumber: '' })) }}
                           />
-                        </F>
-                        <F label="Confirm Account Number" err={wireErrors.confirmAccount}>
+                        </WireField>
+                        <WireField label="Confirm Account Number" err={wireErrors.confirmAccount}>
                           <input
                             className={`modal-input${wireErrors.confirmAccount ? ' wire-input--error' : ''}`}
                             placeholder="Re-enter account number"
                             value={confirmAccount}
                             onChange={e => { setConfirmAccount(e.target.value); setWireErrors(p => ({ ...p, confirmAccount: '' })) }}
                           />
-                        </F>
+                        </WireField>
                       </>
                     )}
 
@@ -764,10 +745,10 @@ export default function TransferModal({ onClose, onAdd }) {
                     </label>
                     {useIntermediary && (
                       <div className="wire-intermediary-body">
-                        <F label="Intermediary Bank Name">
+                        <WireField label="Intermediary Bank Name">
                           <input className="modal-input" placeholder="Bank name" value={interBankName} onChange={e => setInterBankName(e.target.value)} />
-                        </F>
-                        <F label="Intermediary SWIFT / BIC">
+                        </WireField>
+                        <WireField label="Intermediary SWIFT / BIC">
                           <input
                             className="modal-input"
                             placeholder="e.g. CHASUS33"
@@ -775,10 +756,10 @@ export default function TransferModal({ onClose, onAdd }) {
                             onChange={e => setInterSwift(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                             maxLength={11}
                           />
-                        </F>
-                        <F label="Intermediary Account Number">
+                        </WireField>
+                        <WireField label="Intermediary Account Number">
                           <input className="modal-input" placeholder="Account number" value={interAccount} onChange={e => setInterAccount(e.target.value)} />
-                        </F>
+                        </WireField>
                         <div className="wire-intermediary-note">
                           Some banks in certain countries require an intermediary (correspondent) bank to process international wires.
                         </div>
@@ -794,7 +775,7 @@ export default function TransferModal({ onClose, onAdd }) {
                   </div>
                   <div className="wire-section__body">
                     <div className="wire-grid-2">
-                      <F label="Transfer Date">
+                      <WireField label="Transfer Date">
                         <input
                           className="modal-input"
                           type="date"
@@ -802,8 +783,8 @@ export default function TransferModal({ onClose, onAdd }) {
                           value={wireDate}
                           onChange={e => setWireDate(e.target.value)}
                         />
-                      </F>
-                      <F label="Purpose of Transfer (required by law)" err={wireErrors.wirePurpose}>
+                      </WireField>
+                      <WireField label="Purpose of Transfer (required by law)" err={wireErrors.wirePurpose}>
                         <select
                           className={`modal-select${wireErrors.wirePurpose ? ' wire-input--error' : ''}`}
                           value={wirePurpose}
@@ -812,10 +793,10 @@ export default function TransferModal({ onClose, onAdd }) {
                           <option value="">Select purpose…</option>
                           {PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
-                      </F>
+                      </WireField>
                     </div>
 
-                    <F label="Reference / Message for Recipient">
+                    <WireField label="Reference / Message for Recipient">
                       <input
                         className="modal-input"
                         placeholder="This message will appear on the recipient's bank statement"
@@ -824,16 +805,16 @@ export default function TransferModal({ onClose, onAdd }) {
                         onChange={e => setWireReference(e.target.value)}
                       />
                       <div className="wire-char-counter">{wireReference.length}/140</div>
-                    </F>
+                    </WireField>
 
-                    <F label="Your Reference (internal memo, optional)">
+                    <WireField label="Your Reference (internal memo, optional)">
                       <input
                         className="modal-input"
                         placeholder="Internal reference number or note"
                         value={wireInternalRef}
                         onChange={e => setWireInternalRef(e.target.value)}
                       />
-                    </F>
+                    </WireField>
                   </div>
                 </div>
 
@@ -858,10 +839,6 @@ export default function TransferModal({ onClose, onAdd }) {
                     <label className="wire-checkbox-row">
                       <input type="checkbox" checked={chk2} onChange={e => { setChk2(e.target.checked); setWireErrors(p => ({ ...p, compliance: '' })) }} />
                       I understand this transfer cannot be cancelled once submitted
-                    </label>
-                    <label className="wire-checkbox-row">
-                      <input type="checkbox" checked={chk3} onChange={e => { setChk3(e.target.checked); setWireErrors(p => ({ ...p, compliance: '' })) }} />
-                      I understand the $45.00 fee will be debited from my account
                     </label>
                   </div>
                 </div>
@@ -889,14 +866,6 @@ export default function TransferModal({ onClose, onAdd }) {
                     <div className="wire-review-row">
                       <span className="wire-review-row__key">Exchange Rate</span>
                       <span className="wire-review-row__val">1 USD = {rate} {wireCurrency}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Transfer Fee</span>
-                      <span className="wire-review-row__val">{fmtUSD(WIRE_FEE)}</span>
-                    </div>
-                    <div className="wire-review-row" style={{ fontWeight: 700, fontSize: 14 }}>
-                      <span className="wire-review-row__key">Total Debited</span>
-                      <span className="wire-review-row__val">{fmtUSD(totalDebited)}</span>
                     </div>
                     <div className="wire-review-row">
                       <span className="wire-review-row__key">Transfer Date</span>
@@ -968,7 +937,7 @@ export default function TransferModal({ onClose, onAdd }) {
                 <div className="wire-done__email">You will receive an email confirmation at a•••••n@example.com</div>
 
                 <div className="wire-done__summary">
-                  <div className="wire-review-row" style={{ borderBottom: '1px solid #EBEBEB', paddingBottom: 8, marginBottom: 4 }}>
+                  <div className="wire-review-row">
                     <span className="wire-review-row__key">Recipient</span>
                     <span className="wire-review-row__val">{recipientName}</span>
                   </div>
@@ -979,14 +948,6 @@ export default function TransferModal({ onClose, onAdd }) {
                   <div className="wire-review-row">
                     <span className="wire-review-row__key">Recipient Receives</span>
                     <span className="wire-review-row__val">{fmtForeign(recipientReceives, wireCurrency)} {wireCurrency}</span>
-                  </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Transfer Fee</span>
-                    <span className="wire-review-row__val">{fmtUSD(WIRE_FEE)}</span>
-                  </div>
-                  <div className="wire-review-row" style={{ fontWeight: 700 }}>
-                    <span className="wire-review-row__key">Total Debited</span>
-                    <span className="wire-review-row__val">{fmtUSD(totalDebited)}</span>
                   </div>
                   <div className="wire-review-row">
                     <span className="wire-review-row__key">Bank</span>

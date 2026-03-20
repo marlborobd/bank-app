@@ -78,7 +78,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
         {/* Welcome bar */}
         <div className="welcome-bar">
           <div className="welcome-bar__inner">
-            <span className="welcome-bar__greeting">{greeting}, Admin</span>
+            <span className="welcome-bar__greeting">{greeting}, Repo EQUIP</span>
             <span className="welcome-bar__date">{today}</span>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
         <AddTransactionModal onClose={() => setModal(null)} onAdd={onAddTransaction} />
       )}
       {modal === 'transfer' && (
-        <TransferModal onClose={() => setModal(null)} onAdd={onAddTransaction} />
+        <TransferModal onClose={() => setModal(null)} onAdd={onAddTransaction} currentBalance={currentBalance} />
       )}
     </div>
   )
