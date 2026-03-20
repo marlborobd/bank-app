@@ -17,7 +17,7 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-page">
       <div className="login-card">
-        {/* Logo + title */}
+        {/* Navy header with logo */}
         <div className="login-logo-wrap">
           <div className="login-logo">
             <svg width="42" height="42" viewBox="0 0 40 40" fill="none">
@@ -33,31 +33,39 @@ export default function Login({ onLogin }) {
           <div className="login-sub">Sign in to continue</div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <label className="login-label">Username</label>
-          <input
-            className="login-input"
-            type="text"
-            placeholder="admin"
-            value={username}
-            onChange={e => { setUsername(e.target.value); setError('') }}
-            autoComplete="username"
-          />
+        {/* Form area */}
+        <div className="login-form-area">
+          <form onSubmit={handleSubmit}>
+            <label className="login-label">Username</label>
+            <input
+              className="login-input"
+              type="text"
+              placeholder="admin"
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError('') }}
+              autoComplete="username"
+            />
 
-          <label className="login-label">Password</label>
-          <input
-            className="login-input"
-            type="password"
-            placeholder="1234"
-            value={password}
-            onChange={e => { setPassword(e.target.value); setError('') }}
-            autoComplete="current-password"
-          />
+            <label className="login-label">Password</label>
+            <input
+              className="login-input"
+              type="password"
+              placeholder="1234"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError('') }}
+              autoComplete="current-password"
+            />
 
-          {error && <div className="login-error">{error}</div>}
+            {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="login-btn">Sign In</button>
-        </form>
+            <button type="submit" className="login-btn">Sign In</button>
+
+            <div className="login-links">
+              <span className="login-link">Forgot username?</span>
+              <span className="login-link">Forgot password?</span>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

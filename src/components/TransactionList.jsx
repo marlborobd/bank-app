@@ -19,7 +19,7 @@ function formatAmount(n) {
   }).format(n)
 }
 
-// ── SVG Icons (unchanged) ──────────────────────────────────────────
+// ── SVG Icons ──────────────────────────────────────────
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <circle cx="11" cy="11" r="7" stroke="#003087" strokeWidth="2.2"/>
@@ -40,13 +40,8 @@ const DownloadIcon = () => (
     <path d="M3 19h18" stroke="#003087" strokeWidth="2.2" strokeLinecap="round"/>
   </svg>
 )
-const ChevronDown = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-    <path d="M6 9l6 6 6-6" stroke="#003087" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
 
-// ── Feature 1: Delete Confirmation Modal ──────────────────────────
+// ── Delete Confirmation Modal ──────────────────────────
 function DeleteModal({ tx, onConfirm, onCancel }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -211,122 +206,116 @@ export default function TransactionList({
         <div className="page-scroll">
           <div className="txns-page-title">Transactions</div>
 
-          <div className="card" style={{ margin: '8px 16px' }}>
-            {/* Toolbar */}
-            <div className="txns-toolbar">
-              <div className="txns-toolbar__left">
-                <span>Showing</span>
-                <div className="filter-dropdown">
+          <div className="txns-content">
+            <div className="card">
+              {/* Toolbar */}
+              <div className="txns-toolbar">
+                <div className="txns-toolbar__left">
+                  <span>Showing</span>
+                  <div className="filter-dropdown">
+                    <button
+                      className="txns-toolbar__dropdown"
+                      onClick={() => setShowFilterMenu(p => !p)}
+                    >
+                      {filter} ∨
+                    </button>
+                    {showFilterMenu && (
+                      <div className="filter-dropdown__menu">
+                        {FILTER_OPTIONS.map(opt => (
+                          <button
+                            key={opt}
+                            className={`filter-dropdown__item${filter === opt ? ' filter-dropdown__item--selected' : ''}`}
+                            onClick={() => { setFilter(opt); setShowFilterMenu(false) }}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
-                    className="txns-toolbar__dropdown"
-                    onClick={() => setShowFilterMenu(p => !p)}
+                    className="sort-toggle-btn"
+                    onClick={() => setSortDesc(p => !p)}
                   >
-                    {filter} ∨
+                    {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
                   </button>
-                  {showFilterMenu && (
-                    <div className="filter-dropdown__menu">
-                      {FILTER_OPTIONS.map(opt => (
-                        <button
-                          key={opt}
-                          className={`filter-dropdown__item${filter === opt ? ' filter-dropdown__item--selected' : ''}`}
-                          onClick={() => { setFilter(opt); setShowFilterMenu(false) }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                </div>
+
+                <div className="txns-toolbar__icons">
+                  <button
+                    className="txns-toolbar__icon-btn"
+                    title="Search"
+                    onClick={() => setShowSearch(p => !p)}
+                  >
+                    <SearchIcon />
+                  </button>
+                  <button
+                    className="txns-toolbar__icon-btn"
+                    title="Print"
+                    onClick={() => window.print()}
+                  >
+                    <PrintIcon />
+                  </button>
+                  <button
+                    className="txns-toolbar__icon-btn"
+                    title="Export PDF"
+                    onClick={exportPDF}
+                  >
+                    <DownloadIcon />
+                  </button>
                 </div>
               </div>
 
-              <div className="txns-toolbar__icons">
-                <button
-                  className="txns-toolbar__icon-btn"
-                  title="Search"
-                  onClick={() => setShowSearch(p => !p)}
-                >
-                  <SearchIcon />
-                </button>
-                <button
-                  className="txns-toolbar__icon-btn"
-                  title="Print"
-                  onClick={() => window.print()}
-                >
-                  <PrintIcon />
-                </button>
-                <button
-                  className="txns-toolbar__icon-btn"
-                  title="Export PDF"
-                  onClick={exportPDF}
-                >
-                  <DownloadIcon />
-                </button>
-              </div>
-            </div>
-
-            {/* Feature 2: Sort toggle */}
-            <div style={{ padding: '0 18px 10px' }}>
-              <button
-                className="sort-toggle-btn"
-                onClick={() => setSortDesc(p => !p)}
-              >
-                {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
-              </button>
-            </div>
-
-            {/* Search bar */}
-            {showSearch && (
-              <div className="txns-search-bar">
-                <input
-                  className="txns-search-input"
-                  placeholder="Search by description…"
-                  value={searchText}
-                  onChange={e => setSearchText(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            )}
-
-            <hr className="txns-divider" />
-
-            {/* Transaction list */}
-            {visible.length === 0 && (
-              <div className="txns-empty">No transactions found.</div>
-            )}
-
-            {/* Feature 1 + 2 + 3: clickable rows, sorted, chronological balance */}
-            {visible.map((tx, i) => (
-              <div key={tx.id}>
-                <div
-                  className="txn-block txn-block--clickable"
-                  onClick={() => setSelectedTx(tx)}
-                >
-                  <div className="txn-block__row">
-                    <span className="txn-block__key">Date</span>
-                    <span className="txn-block__val">{fmt(tx.date)}</span>
-                  </div>
-                  <div className="txn-block__row">
-                    <span className="txn-block__key">Description</span>
-                    <span className="txn-block__val txn-block__val--bold">{tx.description}</span>
-                  </div>
-                  <div className="txn-block__row">
-                    <span className="txn-block__key">Type</span>
-                    <span className="txn-block__val">{tx.type}</span>
-                  </div>
-                  <div className="txn-block__row">
-                    <span className="txn-block__key">Amount</span>
-                    <span className={`txn-block__val ${tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red'}`}>
-                      {tx.amount >= 0 ? '+' : ''}{formatAmount(tx.amount)}
-                    </span>
-                  </div>
-                  <div className="txn-block__row">
-                    <span className="txn-block__key">Balance</span>
-                    <span className="txn-block__val">{formatAmount(balanceMap[tx.id] ?? 0)}</span>
-                  </div>
+              {/* Search bar */}
+              {showSearch && (
+                <div className="txns-search-bar">
+                  <input
+                    className="txns-search-input"
+                    placeholder="Search by description…"
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
+                    autoFocus
+                  />
                 </div>
-                {i < visible.length - 1 && <hr className="txns-divider" />}
+              )}
+
+              {/* Transaction table */}
+              <div className="txns-table-wrap">
+                <table className="txn-full-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.length === 0 && (
+                      <tr className="txn-empty-row">
+                        <td colSpan="5">No transactions found.</td>
+                      </tr>
+                    )}
+                    {visible.map(tx => (
+                      <tr
+                        key={tx.id}
+                        className="txn-block--clickable"
+                        onClick={() => setSelectedTx(tx)}
+                      >
+                        <td>{fmt(tx.date)}</td>
+                        <td className="txn-desc txn-block__val--bold">{tx.description}</td>
+                        <td>{tx.type}</td>
+                        <td className={tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red'}>
+                          {tx.amount >= 0 ? '+' : ''}{formatAmount(tx.amount)}
+                        </td>
+                        <td>{formatAmount(balanceMap[tx.id] ?? 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            </div>
           </div>
         </div>
 

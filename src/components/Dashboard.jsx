@@ -58,132 +58,172 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
   const [showDetails, setShowDetails] = useState(false)
   const [modal, setModal] = useState(null) // 'pay' | 'transfer'
 
-  // Last 2 transactions (most recent date first)
+  // Last 5 transactions (most recent date first)
   const recent = [...transactions]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 2)
+    .slice(0, 5)
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  })
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
     <div className="app">
       <div className="shell">
         <Header onSignOut={onLogout} />
 
+        {/* Welcome bar */}
+        <div className="welcome-bar">
+          <div className="welcome-bar__inner">
+            <span className="welcome-bar__greeting">{greeting}, Admin</span>
+            <span className="welcome-bar__date">{today}</span>
+          </div>
+        </div>
+
         <div className="page-scroll">
-          {/* Balance card */}
-          <div className="card" style={{ margin: '12px 16px' }}>
-            <div className="balance-card">
-              <div className="balance-card__top">
-                <div>
-                  <div className="balance-card__label">BUS COMP... (...9193)</div>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Checking account</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="balance-card__label">Available balance</div>
-                  <div className="balance-card__amount">{formatAmount(currentBalance)}</div>
-                </div>
-              </div>
+          <div className="dashboard-body">
 
-              <hr className="balance-card__divider" />
+            {/* ── Left Sidebar ── */}
+            <div className="dashboard-sidebar">
 
-              <div className="balance-row">
-                <span className="balance-row__label">Available balance</span>
-                <div className="balance-row__right">
-                  <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
-                  <QuestionIcon />
+              {/* Account summary card */}
+              <div className="card">
+                <div className="account-card">
+                  <div className="account-card__name">BUS COMP... (...9193)</div>
+                  <div className="account-card__type">Business Checking</div>
+                  <div className="account-card__balance-label">Available Balance</div>
+                  <div className="account-card__balance">{formatAmount(currentBalance)}</div>
+                  <div className="account-card__actions">
+                    <button className="account-card__btn account-card__btn--primary" onClick={() => setModal('pay')}>Pay</button>
+                    <button className="account-card__btn account-card__btn--secondary" onClick={onViewAll}>View activity</button>
+                  </div>
                 </div>
-              </div>
-              <div className="balance-row">
-                <span className="balance-row__label">Present balance</span>
-                <div className="balance-row__right">
-                  <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
-                  <QuestionIcon />
-                </div>
-              </div>
 
-              {showDetails && (
-                <div style={{ marginTop: 8 }}>
-                  <div className="balance-row" style={{ borderTop: '1px solid #eaeef5', paddingTop: 10 }}>
-                    <span className="balance-row__label">Total transactions</span>
-                    <span className="balance-row__amount">231</span>
+                <div className="balance-details">
+                  <div className="balance-row">
+                    <span className="balance-row__label">Available balance</span>
+                    <div className="balance-row__right">
+                      <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
+                      <QuestionIcon />
+                    </div>
                   </div>
                   <div className="balance-row">
-                    <span className="balance-row__label">Account type</span>
-                    <span className="balance-row__amount">Business Checking</span>
+                    <span className="balance-row__label">Present balance</span>
+                    <div className="balance-row__right">
+                      <span className="balance-row__amount">{formatAmount(currentBalance)}</span>
+                      <QuestionIcon />
+                    </div>
                   </div>
-                  <div className="balance-row">
-                    <span className="balance-row__label">Account number</span>
-                    <span className="balance-row__amount">••••9193</span>
-                  </div>
-                </div>
-              )}
 
-              <button
-                className="show-details-btn"
-                onClick={() => setShowDetails(p => !p)}
-              >
-                {showDetails ? 'Hide details ∧' : 'Show details ∨'}
-              </button>
-            </div>
-          </div>
+                  {showDetails && (
+                    <>
+                      <div className="balance-row">
+                        <span className="balance-row__label">Total transactions</span>
+                        <span className="balance-row__amount">231</span>
+                      </div>
+                      <div className="balance-row">
+                        <span className="balance-row__label">Account type</span>
+                        <span className="balance-row__amount">Business Checking</span>
+                      </div>
+                      <div className="balance-row">
+                        <span className="balance-row__label">Account number</span>
+                        <span className="balance-row__amount">••••9193</span>
+                      </div>
+                    </>
+                  )}
 
-          {/* Action buttons */}
-          <div className="card">
-            <div className="action-row">
-              <button className="action-btn" onClick={() => setModal('pay')}>
-                <div className="action-btn__circle"><PayIcon /></div>
-                <span className="action-btn__label">Pay</span>
-              </button>
-              <button className="action-btn" onClick={() => setModal('transfer')}>
-                <div className="action-btn__circle"><TransferIcon /></div>
-                <span className="action-btn__label">Transfer</span>
-              </button>
-              <button className="action-btn" disabled>
-                <div className="action-btn__circle"><AcceptIcon /></div>
-                <span className="action-btn__label">Accept</span>
-              </button>
-              <button className="action-btn" disabled>
-                <div className="action-btn__circle"><MoreIcon /></div>
-                <span className="action-btn__label">More</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Manage account */}
-          <div className="card">
-            <div className="manage-card">
-              <div>
-                <div className="manage-card__title">Manage account</div>
-                <div className="manage-card__sub">Access tools &amp; services for your account</div>
-              </div>
-              <ChevronRight />
-            </div>
-          </div>
-
-          {/* Transactions preview */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="txn-card__header">
-              <span className="txn-card__title">Recent transactions</span>
-              <button className="txn-card__see-all" onClick={onViewAll}>
-                See all transactions <ChevronRight />
-              </button>
-            </div>
-
-            {recent.length === 0 && (
-              <div style={{ padding: '16px 18px', color: '#999', fontSize: 13 }}>No transactions yet.</div>
-            )}
-
-            {recent.map(tx => (
-              <div key={tx.id} className="txn-preview-row">
-                <div className="txn-preview-row__left">
-                  <div className="txn-preview-row__title">{tx.description}</div>
-                  <div className="txn-preview-row__date">{fmt(tx.date)}</div>
-                  <div className="txn-preview-row__bal">Bal: {formatAmount(tx.balance)}</div>
-                </div>
-                <div className={`txn-preview-row__amount${tx.amount >= 0 ? ' txn-preview-row__amount--credit' : ''}`}>
-                  {tx.amount >= 0 ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
+                  <button
+                    className="show-details-btn"
+                    onClick={() => setShowDetails(p => !p)}
+                  >
+                    {showDetails ? 'Hide details ∧' : 'Show details ∨'}
+                  </button>
                 </div>
               </div>
-            ))}
+
+              {/* Manage account */}
+              <div className="card">
+                <div className="manage-card">
+                  <div>
+                    <div className="manage-card__title">Manage account</div>
+                    <div className="manage-card__sub">Access tools &amp; services for your account</div>
+                  </div>
+                  <ChevronRight />
+                </div>
+              </div>
+
+            </div>
+
+            {/* ── Main Content ── */}
+            <div className="dashboard-main">
+
+              {/* Quick Actions */}
+              <div className="card">
+                <div className="card-header">
+                  <span className="card-header__title">Quick Actions</span>
+                </div>
+                <div className="action-row">
+                  <button className="action-btn" onClick={() => setModal('pay')}>
+                    <div className="action-btn__circle"><PayIcon /></div>
+                    <span className="action-btn__label">Pay</span>
+                  </button>
+                  <button className="action-btn" onClick={() => setModal('transfer')}>
+                    <div className="action-btn__circle"><TransferIcon /></div>
+                    <span className="action-btn__label">Transfer</span>
+                  </button>
+                  <button className="action-btn" disabled>
+                    <div className="action-btn__circle"><AcceptIcon /></div>
+                    <span className="action-btn__label">Deposit</span>
+                  </button>
+                  <button className="action-btn" disabled>
+                    <div className="action-btn__circle"><MoreIcon /></div>
+                    <span className="action-btn__label">Statements</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Transactions */}
+              <div className="card">
+                <div className="card-header">
+                  <span className="card-header__title">Recent Transactions</span>
+                  <button className="card-link" onClick={onViewAll}>
+                    See all transactions <ChevronRight />
+                  </button>
+                </div>
+
+                <table className="txn-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Amount</th>
+                      <th>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.length === 0 && (
+                      <tr className="txn-empty-row">
+                        <td colSpan="4">No transactions yet.</td>
+                      </tr>
+                    )}
+                    {recent.map(tx => (
+                      <tr key={tx.id}>
+                        <td>{fmt(tx.date)}</td>
+                        <td className="txn-desc">{tx.description}</td>
+                        <td className={tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit'}>
+                          {tx.amount >= 0 ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
+                        </td>
+                        <td>{formatAmount(tx.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
           </div>
         </div>
 
