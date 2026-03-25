@@ -1,4 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+function getZurichTime() {
+  return new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour12: false })
+}
 
 function seededRand(seed) {
   const x = Math.sin(seed) * 10000
@@ -18,14 +22,6 @@ function getRefNum(id) {
   return r
 }
 
-function getTime(id) {
-  const totalMins = Math.floor(seededRand(id * 7) * 720) + 480
-  const hour = Math.floor(totalMins / 60)
-  const min = totalMins % 60
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
-  return `${h}:${String(min).padStart(2, '0')} ${ampm}`
-}
 
 function fmtDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -37,22 +33,28 @@ function formatAmount(n) {
 }
 
 export default function TransactionDetailsModal({ tx, onClose, onReportProblem }) {
+  const [liveTime, setLiveTime] = useState(getZurichTime)
+
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  useEffect(() => {
+    const id = setInterval(() => setLiveTime(getZurichTime()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
   const txnId = getTxnId(tx.id)
   const refNum = getRefNum(tx.id)
-  const time = getTime(tx.id)
   const isCredit = tx.amount >= 0
 
   const bd = tx.bankDetails || {}
   const rows = [
     { label: 'Status', value: <span className="txd-badge">Completed</span> },
     { label: 'Date', value: fmtDate(tx.date) },
-    { label: 'Time', value: time },
+    { label: 'Time', value: liveTime },
     { label: 'Description', value: tx.description },
     { label: 'Category', value: tx.type || 'Other' },
     {
