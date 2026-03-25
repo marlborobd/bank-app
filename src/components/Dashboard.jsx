@@ -3,6 +3,8 @@ import Header from './Header'
 import BottomNav from './BottomNav'
 import AddTransactionModal from './AddTransactionModal'
 import TransferModal from './TransferModal'
+import TransactionDetailsModal from './TransactionDetailsModal'
+import ReportProblemModal from './ReportProblemModal'
 
 function fmt(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -54,9 +56,11 @@ const QuestionIcon = () => (
   <span className="balance-row__icon">?</span>
 )
 
-export default function Dashboard({ transactions, currentBalance, onLogout, onViewAll, onAddTransaction }) {
+export default function Dashboard({ transactions, currentBalance, onLogout, onViewAll, onAddTransaction, onEditTransaction, onDeleteTransaction }) {
   const [showDetails, setShowDetails] = useState(false)
   const [modal, setModal] = useState(null) // 'pay' | 'transfer'
+  const [selectedTx, setSelectedTx] = useState(null)
+  const [txModal, setTxModal] = useState(null) // 'details' | 'report'
 
   // Last 5 transactions (most recent date first)
   const recent = [...transactions]
@@ -201,22 +205,39 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                       <th>Description</th>
                       <th>Amount</th>
                       <th>Balance</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {recent.length === 0 && (
                       <tr className="txn-empty-row">
-                        <td colSpan="4">No transactions yet.</td>
+                        <td colSpan="5">No transactions yet.</td>
                       </tr>
                     )}
                     {recent.map(tx => (
                       <tr key={tx.id}>
                         <td>{fmt(tx.date)}</td>
-                        <td className="txn-desc">{tx.description}</td>
+                        <td className="txn-desc">
+                          <div>{tx.description}</div>
+                          <button
+                            className="txn-report-link"
+                            onClick={() => { setSelectedTx(tx); setTxModal('report') }}
+                          >
+                            Report a problem
+                          </button>
+                        </td>
                         <td className={tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit'}>
                           {tx.amount >= 0 ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
                         </td>
                         <td>{formatAmount(tx.balance)}</td>
+                        <td>
+                          <button
+                            className="txn-see-details"
+                            onClick={() => { setSelectedTx(tx); setTxModal('details') }}
+                          >
+                            See details
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -235,6 +256,21 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
       )}
       {modal === 'transfer' && (
         <TransferModal onClose={() => setModal(null)} onAdd={onAddTransaction} currentBalance={currentBalance} />
+      )}
+      {txModal === 'details' && selectedTx && (
+        <TransactionDetailsModal
+          tx={selectedTx}
+          onClose={() => { setTxModal(null); setSelectedTx(null) }}
+          onReportProblem={() => setTxModal('report')}
+        />
+      )}
+      {txModal === 'report' && selectedTx && (
+        <ReportProblemModal
+          tx={selectedTx}
+          onClose={() => { setTxModal(null); setSelectedTx(null) }}
+          onEdit={(updatedTx) => { onEditTransaction(updatedTx); setTxModal(null); setSelectedTx(null) }}
+          onDelete={(id) => { onDeleteTransaction(id); setTxModal(null); setSelectedTx(null) }}
+        />
       )}
     </div>
   )

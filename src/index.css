@@ -1507,3 +1507,283 @@ a { text-decoration: none; color: inherit; }
   padding: 14px 16px; margin-bottom: 20px; text-align: left;
 }
 .cc-wire-done__btns { display: flex; gap: 10px; justify-content: center; }
+
+/* ════════════════════════════════════════════════════════
+   TRANSACTION TABLE — See details & Report a problem
+════════════════════════════════════════════════════════ */
+.txn-see-details {
+  background: none;
+  border: none;
+  color: #0066CC;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.txn-see-details:hover { text-decoration: underline; }
+
+.txn-report-link {
+  display: block;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0 0;
+  text-align: left;
+  text-decoration: none;
+}
+.txn-report-link:hover { text-decoration: underline; }
+
+.txn-table td { padding-top: 10px; padding-bottom: 10px; }
+
+/* ════════════════════════════════════════════════════════
+   TRANSACTION DETAILS MODAL
+════════════════════════════════════════════════════════ */
+.txd-overlay { animation: txd-fade 0.15s ease; }
+@keyframes txd-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.txd-sheet {
+  background: #fff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: txd-fade 0.15s ease;
+}
+
+.txd-header {
+  background: #003087;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+.txd-header__title { font-size: 16px; font-weight: 700; }
+.txd-header__close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+.txd-header__close:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+
+.txd-body {
+  padding: 0 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.txd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 0;
+  gap: 16px;
+}
+.txd-row__label {
+  font-size: 13px;
+  color: #777;
+  flex-shrink: 0;
+  min-width: 120px;
+}
+.txd-row__value {
+  font-size: 15px;
+  color: #1A1A1A;
+  text-align: right;
+  word-break: break-all;
+}
+.txd-divider { height: 1px; background: #E8E8E8; }
+
+.txd-badge {
+  display: inline-block;
+  background: #E6F4EA;
+  color: #1E7E34;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.txd-amount--credit { color: #1E7E34; font-weight: 600; }
+.txd-amount--debit  { color: #CC0000; font-weight: 600; }
+
+.txd-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px 18px;
+  border-top: 1px solid #E8E8E8;
+  flex-shrink: 0;
+}
+.txd-report-link {
+  background: none;
+  border: none;
+  color: #0066CC;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.txd-report-link:hover { color: #004A99; }
+.txd-close-btn {
+  border: 2px solid #003087;
+  background: none;
+  color: #003087;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 22px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.txd-close-btn:hover { background: #F0F4FA; }
+
+/* ════════════════════════════════════════════════════════
+   REPORT A PROBLEM MODAL
+════════════════════════════════════════════════════════ */
+.rp-overlay { animation: txd-fade 0.15s ease; }
+
+.rp-sheet {
+  background: #fff;
+  width: 100%;
+  max-width: 560px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: txd-fade 0.15s ease;
+}
+/* txd-header reused for rp-sheet header */
+.rp-sheet .txd-header { flex-shrink: 0; }
+
+.rp-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin: 14px 24px 0;
+  line-height: 1.5;
+}
+
+.rp-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A1A1A;
+  padding: 16px 24px 10px;
+}
+
+.rp-field {
+  padding: 0 24px 14px;
+}
+.rp-label {
+  display: block;
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 4px;
+}
+.rp-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #CCC;
+  padding: 6px 0;
+  font-size: 15px;
+  color: #1A1A1A;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.rp-input:focus { border-bottom-color: #0066CC; }
+.rp-select { cursor: pointer; }
+.rp-textarea { resize: vertical; min-height: 64px; font-family: inherit; }
+
+.rp-amount-wrap { display: flex; align-items: center; }
+.rp-dollar { font-size: 15px; color: #1A1A1A; margin-right: 4px; }
+.rp-input--amount { flex: 1; }
+
+.rp-radio-group { display: flex; gap: 20px; padding-top: 6px; }
+.rp-radio-label { font-size: 14px; color: #333; cursor: pointer; }
+
+.rp-char-count { font-size: 11px; color: #AAA; text-align: right; margin-top: 3px; }
+
+.rp-save-btn {
+  display: block;
+  margin: 0 24px 8px;
+  background: #003087;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rp-save-btn:hover { background: #00246B; }
+
+.rp-section-divider { height: 1px; background: #E8E8E8; margin: 16px 0 0; }
+
+.rp-warning-box {
+  margin: 0 24px 14px;
+  background: #FFF0F0;
+  border-left: 4px solid #CC0000;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #CC0000;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.5;
+}
+
+.rp-delete-btn {
+  display: block;
+  margin: 0 24px 20px;
+  background: none;
+  border: 2px solid #CC0000;
+  color: #CC0000;
+  border-radius: 4px;
+  padding: 9px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rp-delete-btn:hover { background: #FFF0F0; }
+
+.rp-confirm { margin: 0 24px 20px; }
+.rp-confirm__text { font-size: 14px; color: #333; margin-bottom: 10px; }
+.rp-confirm__btns { display: flex; gap: 10px; }
+.rp-confirm__yes {
+  background: #CC0000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rp-confirm__yes:hover { background: #AA0000; }
+.rp-confirm__cancel {
+  background: none;
+  border: 1px solid #AAA;
+  color: #555;
+  border-radius: 4px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.rp-confirm__cancel:hover { background: #F5F5F5; }
+
+@media (max-width: 600px) {
+  .txd-sheet, .rp-sheet { border-radius: 0; max-width: 100%; min-height: 100dvh; }
+  .txd-row__label { min-width: 100px; }
+}

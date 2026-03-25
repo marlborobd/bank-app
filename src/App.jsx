@@ -161,6 +161,13 @@ export default function App() {
     setTransactions(prev => recalcBalances(prev.filter(tx => tx.id !== id), seedBal))
   }
 
+  const updateTransaction = (updatedTx) => {
+    setTransactions(prev => recalcBalances(
+      prev.map(tx => tx.id === updatedTx.id ? { ...tx, ...updatedTx } : tx),
+      seedBal
+    ))
+  }
+
   const handleLogin = () => {
     localStorage.setItem('bankSession', JSON.stringify({ loggedIn: true }))
     setPage('dashboard')
@@ -189,6 +196,8 @@ export default function App() {
       onLogout={handleLogout}
       onViewAll={() => setPage('transactions')}
       onAddTransaction={addTransaction}
+      onEditTransaction={updateTransaction}
+      onDeleteTransaction={deleteTransaction}
     />
   )
 }
