@@ -176,7 +176,8 @@ export default function App() {
   }
 
   const addTransaction = (tx) => {
-    const newTx = { ...tx, id: Date.now() }
+    const txnTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour12: false })
+    const newTx = { ...tx, id: Date.now(), txnTime }
     setTransactions(prev => recalcBalances(insertByDate(prev, newTx), seedBal))
   }
 

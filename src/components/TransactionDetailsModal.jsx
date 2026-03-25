@@ -1,8 +1,4 @@
-import { useEffect, useState } from 'react'
-
-function getZurichTime() {
-  return new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour12: false })
-}
+import { useEffect } from 'react'
 
 function seededRand(seed) {
   const x = Math.sin(seed) * 10000
@@ -33,18 +29,11 @@ function formatAmount(n) {
 }
 
 export default function TransactionDetailsModal({ tx, onClose, onReportProblem }) {
-  const [liveTime, setLiveTime] = useState(getZurichTime)
-
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
-
-  useEffect(() => {
-    const id = setInterval(() => setLiveTime(getZurichTime()), 1000)
-    return () => clearInterval(id)
-  }, [])
 
   const txnId = getTxnId(tx.id)
   const refNum = getRefNum(tx.id)
@@ -54,7 +43,7 @@ export default function TransactionDetailsModal({ tx, onClose, onReportProblem }
   const rows = [
     { label: 'Status', value: <span className="txd-badge">Completed</span> },
     { label: 'Date', value: fmtDate(tx.date) },
-    { label: 'Time', value: liveTime },
+    { label: 'Time', value: tx.txnTime || '—' },
     { label: 'Description', value: tx.description },
     { label: 'Category', value: tx.type || 'Other' },
     {
