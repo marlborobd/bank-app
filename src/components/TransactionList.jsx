@@ -141,7 +141,7 @@ export default function TransactionList({
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
     doc.setTextColor(60, 60, 60)
-    doc.text(`Account: BUS COMP... (...9193)`, margin, y); y += 16
+    doc.text(`Account: REPO EQUIP LLC (...9193)`, margin, y); y += 16
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     doc.text(`Export Date: ${today}`, margin, y); y += 24
 

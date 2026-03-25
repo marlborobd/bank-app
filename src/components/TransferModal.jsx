@@ -313,12 +313,20 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const [wireScreen, setWireScreen] = useState('landing')
   const [wireRef, setWireRef] = useState('')
 
-  // Step 1 — Bank details
+  // Step 1 — Bank account details
   const [bankCountry, setBankCountry] = useState('US')
   const [routingNumber, setRoutingNumber] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [confirmAccount, setConfirmAccount] = useState('')
   const [showOtherRouting, setShowOtherRouting] = useState(false)
+
+  // Step 1 — Bank institution details (optional)
+  const [bankName, setBankName] = useState('')
+  const [swiftCode, setSwiftCode] = useState('')
+  const [bankAddress, setBankAddress] = useState('')
+  const [bankCity, setBankCity] = useState('')
+  const [bankState, setBankState] = useState('')
+  const [bankZip, setBankZip] = useState('')
 
   // Step 2 — Recipient details
   const [recipientName, setRecipientName] = useState('')
@@ -348,6 +356,8 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const routingValid = routingDigits.length === 9
   const lookedUpBank = lookupBank(routingDigits)
   const accountLast4 = accountNumber.slice(-4)
+  const swiftLen = swiftCode.replace(/\s/g, '').length
+  const swiftValid = swiftLen === 8 || swiftLen === 11
 
   // ── Deposit / Withdraw submit ────────────────────────────────────
   const handleSubmit = (e) => {
@@ -391,11 +401,19 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const handleWireConfirm = () => {
     const ref = `WIRE-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`
     setWireRef(ref)
+    const bd = {}
+    if (bankName.trim())    bd.bankName    = bankName.trim()
+    if (swiftCode.trim())   bd.swiftCode   = swiftCode.trim()
+    if (bankAddress.trim()) bd.bankAddress = bankAddress.trim()
+    if (bankCity.trim())    bd.bankCity    = bankCity.trim()
+    if (bankState)          bd.bankState   = bankState
+    if (bankZip.trim())     bd.bankZip     = bankZip.trim()
     onAdd({
       description: `NAT TRANSFER - ${recipientName.toUpperCase()}`,
       type: 'Transfer',
       amount: -amountNum,
       date: TODAY,
+      ...(Object.keys(bd).length > 0 ? { bankDetails: bd } : {}),
     })
     setWireScreen('done')
   }
@@ -610,6 +628,77 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                   </div>
                 )}
 
+                {/* Bank Details section */}
+                <div style={{ borderTop: '1px solid #D8D8D8', margin: '16px 0 14px' }} />
+                <div className="cc-wire-step-head__title" style={{ marginBottom: 14 }}>Bank Details</div>
+
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Bank Name</label>
+                    <input
+                      className="cc-wire-input"
+                      value={bankName}
+                      placeholder="e.g. JPMorgan Chase Bank"
+                      onChange={e => setBankName(e.target.value)}
+                    />
+                  </div>
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">SWIFT / BIC Code</label>
+                    <div className="cc-wire-input-wrap">
+                      <input
+                        className="cc-wire-input"
+                        value={swiftCode}
+                        placeholder="e.g. CHASUS33"
+                        maxLength={11}
+                        onChange={e => setSwiftCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                      />
+                      {swiftValid && <span style={{ color: '#006600', fontWeight: 700, flexShrink: 0 }}>✓</span>}
+                    </div>
+                    <div className="cc-wire-helper">8 or 11 characters, e.g. CHASUS33 or CHASUS33XXX</div>
+                  </div>
+                </div>
+
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Bank Address</label>
+                    <input
+                      className="cc-wire-input"
+                      value={bankAddress}
+                      placeholder="e.g. 270 Park Avenue"
+                      onChange={e => setBankAddress(e.target.value)}
+                    />
+                  </div>
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Bank City</label>
+                    <input
+                      className="cc-wire-input"
+                      value={bankCity}
+                      placeholder="e.g. New York"
+                      onChange={e => setBankCity(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Bank State</label>
+                    <select className="cc-wire-select" value={bankState} onChange={e => setBankState(e.target.value)}>
+                      <option value="">Select state</option>
+                      {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="cc-wire-field" style={{ maxWidth: 200 }}>
+                    <label className="cc-wire-label">Bank Zip</label>
+                    <input
+                      className="cc-wire-input"
+                      value={bankZip}
+                      maxLength={5}
+                      placeholder="e.g. 10017"
+                      onChange={e => setBankZip(e.target.value.replace(/\D/g, ''))}
+                    />
+                  </div>
+                </div>
+
                 <div className="cc-wire-btns">
                   <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
                   <button className="cc-wire-btn-next" onClick={() => { if (validateStep1()) setWireScreen('step2') }}>Next</button>
@@ -725,7 +814,7 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                   <div className="cc-wire-field">
                     <label className="cc-wire-label">Wire from</label>
                     <select className="cc-wire-select">
-                      <option>COMMERCIAL CHECKING (...9193): {fmtUSD(currentBalance ?? 0)}</option>
+                      <option>REPO EQUIP LLC (...9193): {fmtUSD(currentBalance ?? 0)}</option>
                     </select>
                   </div>
 
@@ -823,7 +912,7 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                   </div>
                   <div className="cc-wire-review-row">
                     <span className="cc-wire-review-row__key">Wire from</span>
-                    <span className="cc-wire-review-row__val">COMMERCIAL CHECKING (...9193)</span>
+                    <span className="cc-wire-review-row__val">REPO EQUIP LLC (...9193)</span>
                   </div>
                 </div>
 
@@ -866,6 +955,36 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                   </div>
                 </div>
 
+                {(bankName || swiftCode || bankAddress || bankCity || bankState || bankZip) && (
+                  <div className="cc-wire-review-section">
+                    <div className="cc-wire-review-section__title">Bank Details</div>
+                    {bankName && (
+                      <div className="cc-wire-review-row">
+                        <span className="cc-wire-review-row__key">Bank Name</span>
+                        <span className="cc-wire-review-row__val">{bankName}</span>
+                      </div>
+                    )}
+                    {swiftCode && (
+                      <div className="cc-wire-review-row">
+                        <span className="cc-wire-review-row__key">SWIFT / BIC</span>
+                        <span className="cc-wire-review-row__val">{swiftCode}</span>
+                      </div>
+                    )}
+                    {bankAddress && (
+                      <div className="cc-wire-review-row">
+                        <span className="cc-wire-review-row__key">Bank Address</span>
+                        <span className="cc-wire-review-row__val">{bankAddress}</span>
+                      </div>
+                    )}
+                    {(bankCity || bankState || bankZip) && (
+                      <div className="cc-wire-review-row">
+                        <span className="cc-wire-review-row__key">Bank City / State / Zip</span>
+                        <span className="cc-wire-review-row__val">{[bankCity, bankState, bankZip].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="cc-wire-btns">
                   <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
                   <button className="cc-wire-btn-back" onClick={() => setWireScreen('step3')}>Back</button>
@@ -901,6 +1020,18 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                     <span className="cc-wire-review-row__key">Wire date</span>
                     <span className="cc-wire-review-row__val">{wireDate}</span>
                   </div>
+                  {bankName && (
+                    <div className="cc-wire-review-row">
+                      <span className="cc-wire-review-row__key">Bank Name</span>
+                      <span className="cc-wire-review-row__val">{bankName}</span>
+                    </div>
+                  )}
+                  {swiftCode && (
+                    <div className="cc-wire-review-row">
+                      <span className="cc-wire-review-row__key">SWIFT / BIC</span>
+                      <span className="cc-wire-review-row__val">{swiftCode}</span>
+                    </div>
+                  )}
                   {currentBalance != null && (
                     <div className="cc-wire-review-row">
                       <span className="cc-wire-review-row__key">New available balance</span>

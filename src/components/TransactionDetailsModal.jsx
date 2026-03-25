@@ -48,6 +48,7 @@ export default function TransactionDetailsModal({ tx, onClose, onReportProblem }
   const time = getTime(tx.id)
   const isCredit = tx.amount >= 0
 
+  const bd = tx.bankDetails || {}
   const rows = [
     { label: 'Status', value: <span className="txd-badge">Completed</span> },
     { label: 'Date', value: fmtDate(tx.date) },
@@ -62,9 +63,15 @@ export default function TransactionDetailsModal({ tx, onClose, onReportProblem }
         </span>
       )
     },
-    { label: 'Account', value: 'BUS COMP... (...9193)' },
+    { label: 'Account', value: 'REPO EQUIP LLC (...9193)' },
     { label: 'Transaction ID', value: txnId },
     { label: 'Reference #', value: refNum },
+    ...(bd.bankName    ? [{ label: 'Bank Name',    value: bd.bankName }]    : []),
+    ...(bd.swiftCode   ? [{ label: 'SWIFT / BIC',  value: bd.swiftCode }]   : []),
+    ...(bd.bankAddress ? [{ label: 'Bank Address', value: bd.bankAddress }] : []),
+    ...((bd.bankCity || bd.bankState || bd.bankZip)
+      ? [{ label: 'Bank Location', value: [bd.bankCity, bd.bankState, bd.bankZip].filter(Boolean).join(', ') }]
+      : []),
   ]
 
   return (

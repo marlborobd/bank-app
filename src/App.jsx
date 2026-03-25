@@ -105,9 +105,28 @@ function loadSession() {
   } catch { return false }
 }
 
-function getSeedBalance() {
-  localStorage.setItem('bankSeedBalance', String(SEED_BALANCE))
-  return SEED_BALANCE
+function getBaseBalance() {
+  const stored = localStorage.getItem('baseBalance')
+  if (stored !== null) return parseFloat(stored)
+  // Migrate from old key if present
+  const oldVal = localStorage.getItem('bankSeedBalance')
+  if (oldVal !== null) {
+    localStorage.setItem('baseBalance', oldVal)
+    return parseFloat(oldVal)
+  }
+  // Fresh install default
+  localStorage.setItem('baseBalance', '24850.00')
+  return 24850.00
+}
+
+// Migrate account name in localStorage session if outdated
+function migrateSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('bankSession'))
+    if (s && ['Admin', 'Alex Johnson', 'Repo EQUIP'].includes(s.name)) {
+      localStorage.setItem('bankSession', JSON.stringify({ ...s, name: 'REPO EQUIP LLC' }))
+    }
+  } catch { /* ignore */ }
 }
 
 const SEED_VERSION = 'v4'
@@ -131,9 +150,9 @@ function loadTransactions(seedBal) {
 }
 
 export default function App() {
-  const [seedBal] = useState(getSeedBalance)
-  const [page, setPage] = useState(loadSession() ? 'dashboard' : 'login')
-  const [transactions, setTransactions] = useState(() => loadTransactions(getSeedBalance()))
+  const [seedBal] = useState(getBaseBalance)
+  const [page, setPage] = useState(() => { migrateSession(); return loadSession() ? 'dashboard' : 'login' })
+  const [transactions, setTransactions] = useState(() => loadTransactions(getBaseBalance()))
 
   useEffect(() => {
     localStorage.setItem('bankTransactions', JSON.stringify(transactions))
@@ -142,6 +161,10 @@ export default function App() {
   const currentBalance = parseFloat(
     (seedBal + transactions.reduce((sum, tx) => sum + tx.amount, 0)).toFixed(2)
   )
+
+  useEffect(() => {
+    localStorage.setItem('currentBalance', String(currentBalance))
+  }, [currentBalance])
 
   const insertByDate = (txArray, newTx) => {
     const newDate = new Date(newTx.date)

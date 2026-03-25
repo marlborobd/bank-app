@@ -82,7 +82,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
         {/* Welcome bar */}
         <div className="welcome-bar">
           <div className="welcome-bar__inner">
-            <span className="welcome-bar__greeting">{greeting}, Repo EQUIP</span>
+            <span className="welcome-bar__greeting">{greeting}, REPO EQUIP LLC</span>
             <span className="welcome-bar__date">{today}</span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
               {/* Account summary card */}
               <div className="card">
                 <div className="account-card">
-                  <div className="account-card__name">BUS COMP... (...9193)</div>
+                  <div className="account-card__name">REPO EQUIP LLC (...9193)</div>
                   <div className="account-card__type">Business Checking</div>
                   <div className="account-card__balance-label">Available Balance</div>
                   <div className="account-card__balance">{formatAmount(currentBalance)}</div>
