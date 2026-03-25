@@ -153,6 +153,13 @@ function validateSWIFT(code) {
   return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(code.replace(/\s/g, ''))
 }
 
+function formatRoutingNumber(val) {
+  const digits = val.replace(/\D/g, '').slice(0, 9)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+}
+
 function maskAccount(val) {
   const stripped = val.replace(/\s/g, '')
   if (stripped.length <= 4) return stripped
@@ -311,6 +318,9 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const [chk1, setChk1] = useState(false)
   const [chk2, setChk2] = useState(false)
 
+  // Section 3 — Routing Number
+  const [routingNumber, setRoutingNumber] = useState('')
+
   // Validation errors
   const [wireErrors, setWireErrors] = useState({})
 
@@ -325,6 +335,8 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const expectedIbanLen = IBAN_LENGTHS['']   // no country selected, skip length check
   const ibanValid = ibanStripped.length >= 15
   const swiftValid = swiftCode.length >= 8 && validateSWIFT(swiftCode)
+  const routingDigits = routingNumber.replace(/\D/g, '')
+  const routingValid = routingDigits.length === 9
 
   // ── Deposit / Withdraw submit ────────────────────────────────────
   const handleSubmit = (e) => {
@@ -355,6 +367,7 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
       if (!accountNumber.trim()) errs.accountNumber = 'Required'
       if (accountNumber !== confirmAccount) errs.confirmAccount = 'Account numbers do not match'
     }
+    if (routingDigits.length !== 9) errs.routingNumber = 'Routing number must be exactly 9 digits'
     if (!wirePurpose) errs.wirePurpose = 'Required'
     if (!chk1 || !chk2) errs.compliance = 'All checkboxes must be checked'
     setWireErrors(errs)
@@ -567,6 +580,31 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                         />
                       </WireField>
                     </div>
+
+                    <WireField
+                      label="Routing Number"
+                      err={wireErrors.routingNumber}
+                      tooltip="The 9-digit routing number identifies the recipient's bank. Find it at the bottom of a check or on the bank's website."
+                    >
+                      <div className="wire-iban-row">
+                        <input
+                          className={`modal-input${wireErrors.routingNumber ? ' wire-input--error' : ''}`}
+                          style={{ flex: 1, marginBottom: 0 }}
+                          placeholder="e.g. 021000021"
+                          value={routingNumber}
+                          onChange={e => {
+                            setRoutingNumber(formatRoutingNumber(e.target.value))
+                            setWireErrors(p => ({ ...p, routingNumber: '' }))
+                          }}
+                          onBlur={() => {
+                            if (routingNumber && routingDigits.length !== 9) {
+                              setWireErrors(p => ({ ...p, routingNumber: 'Routing number must be exactly 9 digits' }))
+                            }
+                          }}
+                        />
+                        {routingValid && <span className="wire-iban-valid">✓</span>}
+                      </div>
+                    </WireField>
 
                     <div className="wire-grid-2">
                       <WireField label="Bank Address">
@@ -868,6 +906,10 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                       <span className="wire-review-row__val">{swiftCode}</span>
                     </div>
                     <div className="wire-review-row">
+                      <span className="wire-review-row__key">Routing Number</span>
+                      <span className="wire-review-row__val">{routingNumber}</span>
+                    </div>
+                    <div className="wire-review-row">
                       <span className="wire-review-row__key">{accountType === 'iban' ? 'IBAN' : 'Account'}</span>
                       <span className="wire-review-row__val">
                         {maskAccount(accountType === 'iban' ? ibanStripped : accountNumber)}
@@ -930,6 +972,10 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                     <span className="wire-review-row__val">{swiftCode}</span>
                   </div>
                   <div className="wire-review-row">
+                    <span className="wire-review-row__key">Routing Number</span>
+                    <span className="wire-review-row__val">{routingNumber}</span>
+                  </div>
+                  <div className="wire-review-row">
                     <span className="wire-review-row__key">Transfer Speed</span>
                     <span className="wire-review-row__val">{speedLabel(wireSpeed)}</span>
                   </div>
@@ -937,6 +983,14 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
                     <span className="wire-review-row__key">Delivery</span>
                     <span className="wire-review-row__val">{deliveryMsg(wireSpeed)}</span>
                   </div>
+                  {currentBalance != null && (
+                    <div className="wire-review-row">
+                      <span className="wire-review-row__key">New available balance</span>
+                      <span className="wire-review-row__val" style={{ color: 'var(--chase-blue)', fontWeight: 700 }}>
+                        {fmtUSD(currentBalance)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="wire-done__btns">
