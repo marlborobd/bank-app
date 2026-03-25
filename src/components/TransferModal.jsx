@@ -97,6 +97,26 @@ const IBAN_LENGTHS = {
   AE: 23, SA: 24, IL: 23,
 }
 
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
+  { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'FL', name: 'Florida' },
+  { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
+  { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
+  { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
+  { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
+  { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
+  { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
+  { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
+  { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
+  { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
+  { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' },
+]
+
 const PURPOSES = [
   'Family Support / Personal',
   'Business Payment',
@@ -151,6 +171,13 @@ function formatIBAN(str) {
 
 function validateSWIFT(code) {
   return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(code.replace(/\s/g, ''))
+}
+
+function lookupBank(digits) {
+  if (digits.length < 3) return null
+  const prefix = digits.slice(0, 3)
+  const map = { '021': 'JPMorgan Chase', '026': 'Bank of America', '071': 'US Bank National Association', '322': 'Wells Fargo Bank', '267': 'Citibank' }
+  return map[prefix] || null
 }
 
 function formatRoutingNumber(val) {
@@ -282,61 +309,45 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
 
-  // Wire step: 'form' | 'review' | 'done'
-  const [wireStep, setWireStep] = useState('form')
+  // Wire screen: 'landing'|'step1'|'step2'|'step3'|'review'|'done'
+  const [wireScreen, setWireScreen] = useState('landing')
   const [wireRef, setWireRef] = useState('')
 
-  // Section 1 — Your Account
-  const [wireAmount, setWireAmount] = useState('')
-  const [wireCurrency, setWireCurrency] = useState('USD')
-
-  // Section 2 — Recipient Info (address fields removed)
-  const [recipientName, setRecipientName] = useState('')
-
-  // Section 3 — Bank Details
-  const [bankName, setBankName] = useState('')
-  const [bankCountry, setBankCountry] = useState('')
-  const [bankAddress, setBankAddress] = useState('')
-  const [bankCity, setBankCity] = useState('')
-  const [swiftCode, setSwiftCode] = useState('')
-  const [accountType, setAccountType] = useState('iban')
-  const [ibanValue, setIbanValue] = useState('')
+  // Step 1 — Bank details
+  const [bankCountry, setBankCountry] = useState('US')
+  const [routingNumber, setRoutingNumber] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [confirmAccount, setConfirmAccount] = useState('')
-  const [useIntermediary, setUseIntermediary] = useState(false)
-  const [interBankName, setInterBankName] = useState('')
-  const [interSwift, setInterSwift] = useState('')
-  const [interAccount, setInterAccount] = useState('')
+  const [showOtherRouting, setShowOtherRouting] = useState(false)
 
-  // Section 4 — Transfer Details (date replaced by speed)
-  const [wireSpeed, setWireSpeed] = useState('instant')
-  const [wirePurpose, setWirePurpose] = useState('')
-  const [wireReference, setWireReference] = useState('')
-  const [wireInternalRef, setWireInternalRef] = useState('')
+  // Step 2 — Recipient details
+  const [recipientName, setRecipientName] = useState('')
+  const [nickname, setNickname] = useState('')
+  const [recipientCountry, setRecipientCountry] = useState('US')
+  const [address, setAddress] = useState('')
+  const [address2, setAddress2] = useState('')
+  const [city, setCity] = useState('')
+  const [recipientState, setRecipientState] = useState('')
+  const [zipCode, setZipCode] = useState('')
 
-  // Compliance
-  const [chk1, setChk1] = useState(false)
-  const [chk2, setChk2] = useState(false)
-
-  // Section 3 — Routing Number
-  const [routingNumber, setRoutingNumber] = useState('')
+  // Step 3 — Wire details
+  const [wireAmount, setWireAmount] = useState('')
+  const [wireDate, setWireDate] = useState(TODAY)
+  const [repeating, setRepeating] = useState(false)
+  const [additionalRoutingInfo, setAdditionalRoutingInfo] = useState('')
+  const [messageToRecipient, setMessageToRecipient] = useState('')
+  const [memo, setMemo] = useState('')
+  const [showAdditional, setShowAdditional] = useState(true)
 
   // Validation errors
   const [wireErrors, setWireErrors] = useState({})
 
   // Computed
-  const selCurrency = CURRENCIES.find(c => c.code === wireCurrency)
-  const rate = selCurrency?.rate || 1
   const amountNum = parseFloat(wireAmount) || 0
-  const isUSD = wireCurrency === 'USD'
-  const recipientReceives = isUSD ? amountNum : amountNum * rate
-
-  const ibanStripped = ibanValue.replace(/\s/g, '')
-  const expectedIbanLen = IBAN_LENGTHS['']   // no country selected, skip length check
-  const ibanValid = ibanStripped.length >= 15
-  const swiftValid = swiftCode.length >= 8 && validateSWIFT(swiftCode)
   const routingDigits = routingNumber.replace(/\D/g, '')
   const routingValid = routingDigits.length === 9
+  const lookedUpBank = lookupBank(routingDigits)
+  const accountLast4 = accountNumber.slice(-4)
 
   // ── Deposit / Withdraw submit ────────────────────────────────────
   const handleSubmit = (e) => {
@@ -353,34 +364,32 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
     onClose()
   }
 
-  // ── Wire validation ──────────────────────────────────────────────
-  const validateWire = () => {
+  // ── Wire step validations ─────────────────────────────────────────
+  const validateStep1 = () => {
     const errs = {}
-    if (!wireAmount || amountNum <= 0) errs.wireAmount = 'Enter a valid amount'
-    if (!recipientName.trim()) errs.recipientName = 'Required'
-    if (!bankName.trim()) errs.bankName = 'Required'
-    if (!bankCountry) errs.bankCountry = 'Required'
-    if (!swiftCode || !validateSWIFT(swiftCode)) errs.swiftCode = 'Invalid SWIFT/BIC — must be 8 or 11 characters'
-    if (accountType === 'iban') {
-      if (!ibanStripped) errs.ibanValue = 'Required'
-    } else {
-      if (!accountNumber.trim()) errs.accountNumber = 'Required'
-      if (accountNumber !== confirmAccount) errs.confirmAccount = 'Account numbers do not match'
-    }
     if (routingDigits.length !== 9) errs.routingNumber = 'Routing number must be exactly 9 digits'
-    if (!wirePurpose) errs.wirePurpose = 'Required'
-    if (!chk1 || !chk2) errs.compliance = 'All checkboxes must be checked'
+    if (!accountNumber.trim()) errs.accountNumber = 'Required'
+    if (accountNumber !== confirmAccount) errs.confirmAccount = 'Account numbers do not match'
     setWireErrors(errs)
     return Object.keys(errs).length === 0
   }
 
-  const handleWireReview = () => {
-    if (validateWire()) setWireStep('review')
-    else document.querySelector('.modal-sheet--wide')?.scrollTo({ top: 0, behavior: 'smooth' })
+  const validateStep2 = () => {
+    const errs = {}
+    if (!recipientName.trim()) errs.recipientName = 'Required'
+    setWireErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  const validateStep3 = () => {
+    const errs = {}
+    if (!wireAmount || amountNum <= 0) errs.wireAmount = 'Enter a valid amount'
+    setWireErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleWireConfirm = () => {
-    const ref = `NAT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`
+    const ref = `WIRE-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`
     setWireRef(ref)
     onAdd({
       description: `NAT TRANSFER - ${recipientName.toUpperCase()}`,
@@ -388,13 +397,13 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
       amount: -amountNum,
       date: TODAY,
     })
-    setWireStep('done')
+    setWireScreen('done')
   }
 
   const resetTab = (t) => {
     setTab(t)
     setError('')
-    setWireStep('form')
+    setWireScreen('landing')
     setWireErrors({})
   }
 
@@ -402,7 +411,7 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-sheet${tab === 'wire' ? ' modal-sheet--wide' : ''}`}
+        className={`modal-sheet${tab === 'wire' ? ' modal-sheet--xl' : ''}`}
         onClick={e => e.stopPropagation()}
         style={tab === 'wire' ? { alignSelf: 'flex-start', marginTop: 20, marginBottom: 20 } : {}}
       >
@@ -455,551 +464,453 @@ export default function TransferModal({ onClose, onAdd, currentBalance }) {
         {/* ── National Transfer ── */}
         {tab === 'wire' && (
           <>
-            {/* Header banner */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-dark)', marginBottom: 4 }}>
-                National Transfer
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--gray-text)', marginBottom: 14 }}>
-                Send money anywhere in the United States — fast and secure
-              </div>
-              <div className="wire-warning-amber">
-                ⚠ Transfers cannot be cancelled once submitted. Please review all details carefully before submitting.
-              </div>
+            {/* Sub-navigation */}
+            <div className="cc-wire-subnav">
+              <button className="cc-wire-subnav__tab cc-wire-subnav__tab--active">Wires &amp; global transfers</button>
+              <button className="cc-wire-subnav__tab">Send money</button>
+              <button className="cc-wire-subnav__tab">Payment activity</button>
+              <button className="cc-wire-subnav__tab">Manage recipients</button>
+              <button className="cc-wire-subnav__tab">Help &amp; support ▾</button>
             </div>
 
-            <WireProgress step={wireStep} />
+            {/* ════════ SCREEN 0: LANDING ════════ */}
+            {wireScreen === 'landing' && (
+              <div className="cc-wire-landing">
+                <div className="cc-wire-landing__icon">≡$</div>
+                <div className="cc-wire-landing__title">Send money safely for the payments that matter most</div>
+                <div className="cc-wire-landing__subtabs">
+                  <button className="cc-wire-landing__subtab cc-wire-landing__subtab--active">Domestic (U.S.)</button>
+                  <button className="cc-wire-landing__subtab">International</button>
+                </div>
+                <div className="cc-wire-info-grid">
+                  <div className="cc-wire-info-card">
+                    <div className="cc-wire-info-card__title">📋 What to have ready</div>
+                    <ul className="cc-wire-info-card__list">
+                      <li>Recipient full name or business name</li>
+                      <li>Recipient account and routing numbers</li>
+                      <li>Recipient address</li>
+                      <li>Mobile device for verification</li>
+                    </ul>
+                    <button className="cc-wire-info-card__link">Learn more about what to have ready &gt;</button>
+                  </div>
+                  <div className="cc-wire-info-card">
+                    <div className="cc-wire-info-card__title">⏱ Delivery time</div>
+                    <div className="cc-wire-info-card__body">
+                      Most domestic wires arrive within 1 business day. You can check your status on the "Payment activity" page.
+                    </div>
+                    <button className="cc-wire-info-card__link">Learn more about delivery time &gt;</button>
+                  </div>
+                  <div className="cc-wire-info-card">
+                    <div className="cc-wire-info-card__title">📅 Daily limit</div>
+                    <div className="cc-wire-info-card__body">
+                      Your daily online wire limit is $10,000. If you need to send more, contact a member of your Relationship Team.
+                    </div>
+                  </div>
+                  <div className="cc-wire-info-card">
+                    <div className="cc-wire-info-card__title">💲 Domestic fees</div>
+                    <div className="cc-wire-info-card__body">
+                      When you enter your wire info, you'll see the applicable Chase wire transfer fee. Note, your recipient may have charges from their bank that could impact the amount they receive.
+                    </div>
+                  </div>
+                </div>
+                <div className="cc-wire-landing__btns">
+                  <button className="cc-wire-btn-outline" onClick={() => setWireScreen('step1')}>Add a recipient</button>
+                  <button className="cc-wire-btn-primary" onClick={() => setWireScreen('step1')}>Schedule a wire</button>
+                </div>
+              </div>
+            )}
 
-            {/* ════════ STEP 1: FORM ════════ */}
-            {wireStep === 'form' && (
+            {/* ════════ STEP 1: BANK DETAILS ════════ */}
+            {wireScreen === 'step1' && (
               <>
-                {/* Section 1 — Your Account */}
-                <div className="wire-section">
-                  <div className="wire-section__header">
-                    <div className="wire-section__title">1. Your Account</div>
-                  </div>
-                  <div className="wire-section__body">
-                    <div style={{ marginBottom: 16 }}>
-                      <div className="wire-label-text" style={{ marginBottom: 5 }}>From Account</div>
-                      <div className="modal-input" style={{ background: 'var(--gray-bg)', color: 'var(--text-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>BUS COMP... (...9193) — Business Checking</span>
-                      </div>
-                      {currentBalance != null && (
-                        <div style={{ fontSize: 12, color: 'var(--gray-text)', marginTop: 5 }}>
-                          Available balance: <strong>{fmtUSD(currentBalance)}</strong>
-                        </div>
-                      )}
-                    </div>
-
-                    <WireField label="Amount to Send ($)" err={wireErrors.wireAmount}>
-                      <div className="wire-amount-row">
-                        <input
-                          className={`modal-input${wireErrors.wireAmount ? ' wire-input--error' : ''}`}
-                          type="number" min="0.01" step="0.01" placeholder="0.00"
-                          value={wireAmount}
-                          onChange={e => { setWireAmount(e.target.value); setWireErrors(p => ({ ...p, wireAmount: '' })) }}
-                        />
-                        <span className="wire-currency-label">USD</span>
-                      </div>
-                      {currentBalance != null && (
-                        <div style={{ fontSize: 12, color: 'var(--gray-text)', marginTop: -10, marginBottom: 10 }}>
-                          Amount to send cannot exceed available balance ({fmtUSD(currentBalance)})
-                        </div>
-                      )}
-                    </WireField>
-
-                    <WireField label="Currency to Deliver" err={wireErrors.wireCurrency}>
-                      <SearchableSelect
-                        options={CURRENCIES}
-                        value={wireCurrency}
-                        onChange={v => setWireCurrency(v)}
-                        placeholder="Select currency…"
-                        error={wireErrors.wireCurrency}
-                      />
-                    </WireField>
-
-                    {selCurrency && !isUSD && (
-                      <div className="wire-rate-box">
-                        ℹ️ &nbsp;1 USD = <strong>{selCurrency.rate} {selCurrency.code}</strong> — Rate valid for 30 minutes
-                      </div>
-                    )}
-
-                    {amountNum > 0 && (
-                      <div style={{ marginBottom: 14 }}>
-                        <div className="wire-label-text" style={{ marginBottom: 5 }}>Recipient Receives (estimated)</div>
-                        <input
-                          className="modal-input"
-                          readOnly
-                          value={isUSD ? fmtUSD(amountNum) : fmtForeign(recipientReceives, wireCurrency)}
-                          style={{ background: 'var(--gray-bg)', color: 'var(--gray-text)' }}
-                        />
-                      </div>
-                    )}
-                  </div>
+                <div className="cc-wire-step-indicator">Step 1 of 3</div>
+                <div className="cc-wire-step-head">
+                  <div className="cc-wire-step-head__icon">👤</div>
+                  <div className="cc-wire-step-head__title">Add recipient bank details</div>
+                  <div className="cc-wire-step-head__sub">Make sure these details match your recipient's bank records.</div>
                 </div>
 
-                {/* Section 2 — Recipient Information (name only) */}
-                <div className="wire-section">
-                  <div className="wire-section__header">
-                    <div className="wire-section__title">2. Recipient Information</div>
-                  </div>
-                  <div className="wire-section__body">
-                    <WireField label="Recipient Full Name (as it appears on bank account)" err={wireErrors.recipientName}>
-                      <input
-                        className={`modal-input${wireErrors.recipientName ? ' wire-input--error' : ''}`}
-                        placeholder="Full legal name"
-                        value={recipientName}
-                        onChange={e => { setRecipientName(e.target.value); setWireErrors(p => ({ ...p, recipientName: '' })) }}
-                      />
-                    </WireField>
-                  </div>
-                </div>
-
-                {/* Section 3 — Bank Details */}
-                <div className="wire-section">
-                  <div className="wire-section__header">
-                    <div className="wire-section__title">3. Recipient Bank Details</div>
-                  </div>
-                  <div className="wire-section__body">
-                    <div className="wire-grid-2">
-                      <WireField label="Bank Name" err={wireErrors.bankName}>
-                        <input
-                          className={`modal-input${wireErrors.bankName ? ' wire-input--error' : ''}`}
-                          placeholder="e.g. Chase, Bank of America"
-                          value={bankName}
-                          onChange={e => { setBankName(e.target.value); setWireErrors(p => ({ ...p, bankName: '' })) }}
-                        />
-                      </WireField>
-                      <WireField label="Bank Country" err={wireErrors.bankCountry}>
-                        <SearchableSelect
-                          options={COUNTRIES}
-                          value={bankCountry}
-                          onChange={v => { setBankCountry(v); setWireErrors(p => ({ ...p, bankCountry: '' })) }}
-                          placeholder="Select country…"
-                          error={wireErrors.bankCountry}
-                        />
-                      </WireField>
+                <div className="cc-wire-grid-2">
+                  <div>
+                    <div className="cc-wire-field">
+                      <label className="cc-wire-label">Bank country</label>
+                      <select className="cc-wire-select" value={bankCountry} onChange={e => setBankCountry(e.target.value)}>
+                        {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                      </select>
                     </div>
-
-                    <WireField
-                      label="Routing Number"
-                      err={wireErrors.routingNumber}
-                      tooltip="The 9-digit routing number identifies the recipient's bank. Find it at the bottom of a check or on the bank's website."
-                    >
-                      <div className="wire-iban-row">
+                  </div>
+                  <div>
+                    <div className="cc-wire-field">
+                      <label className="cc-wire-label">Wire routing number</label>
+                      <div className="cc-wire-input-wrap">
                         <input
-                          className={`modal-input${wireErrors.routingNumber ? ' wire-input--error' : ''}`}
-                          style={{ flex: 1, marginBottom: 0 }}
-                          placeholder="e.g. 021000021"
+                          className={`cc-wire-input${wireErrors.routingNumber ? ' cc-wire-input--error' : ''}`}
                           value={routingNumber}
+                          placeholder=""
+                          maxLength={11}
                           onChange={e => {
                             setRoutingNumber(formatRoutingNumber(e.target.value))
                             setWireErrors(p => ({ ...p, routingNumber: '' }))
                           }}
                           onBlur={() => {
-                            if (routingNumber && routingDigits.length !== 9) {
+                            if (routingNumber && routingDigits.length !== 9)
                               setWireErrors(p => ({ ...p, routingNumber: 'Routing number must be exactly 9 digits' }))
-                            }
                           }}
                         />
-                        {routingValid && <span className="wire-iban-valid">✓</span>}
+                        {routingValid && <span style={{ color: '#006600', fontWeight: 700, flexShrink: 0 }}>✓</span>}
                       </div>
-                    </WireField>
-
-                    <div className="wire-grid-2">
-                      <WireField label="Bank Address">
-                        <input
-                          className="modal-input"
-                          placeholder="Bank street address"
-                          value={bankAddress}
-                          onChange={e => setBankAddress(e.target.value)}
-                        />
-                      </WireField>
-                      <WireField label="Bank City">
-                        <input
-                          className="modal-input"
-                          placeholder="Bank city"
-                          value={bankCity}
-                          onChange={e => setBankCity(e.target.value)}
-                        />
-                      </WireField>
-                    </div>
-
-                    <WireField
-                      label="SWIFT / BIC Code"
-                      err={wireErrors.swiftCode}
-                      tooltip="The SWIFT/BIC code identifies your recipient's bank internationally. Find it on their bank statement or website."
-                    >
-                      <input
-                        className={`modal-input${wireErrors.swiftCode ? ' wire-input--error' : ''}`}
-                        placeholder="e.g. CHASUS33 or BTRLRO22"
-                        value={swiftCode}
-                        onChange={e => {
-                          const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-                          setSwiftCode(val)
-                          setWireErrors(p => ({ ...p, swiftCode: '' }))
-                        }}
-                        maxLength={11}
-                      />
-                      <div className="wire-swift-hint">
-                        Format: AAAABBCC or AAAABBCCXXX (8 or 11 characters)
-                        {swiftValid && <span style={{ color: 'var(--success)', marginLeft: 8 }}>✓ Valid</span>}
-                      </div>
-                    </WireField>
-
-                    {/* Account type toggle */}
-                    <div style={{ marginBottom: 5 }}>
-                      <div className="wire-label-text" style={{ marginBottom: 8 }}>Account Number / IBAN</div>
-                      <div className="wire-account-toggle">
-                        <button
-                          type="button"
-                          className={`wire-account-opt${accountType === 'iban' ? ' wire-account-opt--active' : ''}`}
-                          onClick={() => setAccountType('iban')}
-                        >
-                          <input type="radio" readOnly checked={accountType === 'iban'} style={{ accentColor: 'var(--chase-blue)' }} />
-                          IBAN <span style={{ fontSize: 11, fontWeight: 400 }}>(Europe, Middle East)</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`wire-account-opt${accountType === 'account' ? ' wire-account-opt--active' : ''}`}
-                          onClick={() => setAccountType('account')}
-                        >
-                          <input type="radio" readOnly checked={accountType === 'account'} style={{ accentColor: 'var(--chase-blue)' }} />
-                          Account Number <span style={{ fontSize: 11, fontWeight: 400 }}>(US, Asia)</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {accountType === 'iban' && (
-                      <WireField label="" err={wireErrors.ibanValue}>
-                        <div className="wire-iban-row">
-                          <input
-                            className={`modal-input${wireErrors.ibanValue ? ' wire-input--error' : ''}`}
-                            style={{ flex: 1, marginBottom: 0 }}
-                            placeholder="e.g. RO49 AAAA 1B31 0075 9384 0000"
-                            value={ibanValue}
-                            onChange={e => {
-                              setIbanValue(formatIBAN(e.target.value))
-                              setWireErrors(p => ({ ...p, ibanValue: '' }))
-                            }}
-                          />
-                          {ibanValid && <span className="wire-iban-valid">✓</span>}
+                      <div className="cc-wire-helper">For Chase recipients the routing number is 021000021.</div>
+                      {wireErrors.routingNumber && <div className="cc-wire-error-text">{wireErrors.routingNumber}</div>}
+                      {routingValid && lookedUpBank && (
+                        <div className="cc-wire-bank-box">
+                          <div className="cc-wire-bank-box__icon">🏦</div>
+                          <div className="cc-wire-bank-box__text">
+                            The wire routing number you entered is registered with:<br/>
+                            <span className="cc-wire-bank-box__name">{lookedUpBank}</span><br/>
+                            If this bank doesn't match the bank on your wire instructions, confirm with your recipient.
+                          </div>
                         </div>
-                      </WireField>
-                    )}
-
-                    {accountType === 'account' && (
-                      <>
-                        <WireField label="Account Number" err={wireErrors.accountNumber}>
-                          <input
-                            className={`modal-input${wireErrors.accountNumber ? ' wire-input--error' : ''}`}
-                            placeholder="Account number"
-                            value={accountNumber}
-                            onChange={e => { setAccountNumber(e.target.value); setWireErrors(p => ({ ...p, accountNumber: '' })) }}
-                          />
-                        </WireField>
-                        <WireField label="Confirm Account Number" err={wireErrors.confirmAccount}>
-                          <input
-                            className={`modal-input${wireErrors.confirmAccount ? ' wire-input--error' : ''}`}
-                            placeholder="Re-enter account number"
-                            value={confirmAccount}
-                            onChange={e => { setConfirmAccount(e.target.value); setWireErrors(p => ({ ...p, confirmAccount: '' })) }}
-                          />
-                        </WireField>
-                      </>
-                    )}
-
-                    {/* Intermediary Bank */}
-                    <label className="wire-intermediary-toggle">
-                      <input
-                        type="checkbox"
-                        checked={useIntermediary}
-                        onChange={e => setUseIntermediary(e.target.checked)}
-                        style={{ accentColor: 'var(--chase-blue)' }}
-                      />
-                      My recipient's bank requires an intermediary bank
-                    </label>
-                    {useIntermediary && (
-                      <div className="wire-intermediary-body">
-                        <WireField label="Intermediary Bank Name">
-                          <input className="modal-input" placeholder="Bank name" value={interBankName} onChange={e => setInterBankName(e.target.value)} />
-                        </WireField>
-                        <WireField label="Intermediary SWIFT / BIC">
-                          <input
-                            className="modal-input"
-                            placeholder="e.g. CHASUS33"
-                            value={interSwift}
-                            onChange={e => setInterSwift(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                            maxLength={11}
-                          />
-                        </WireField>
-                        <WireField label="Intermediary Account Number">
-                          <input className="modal-input" placeholder="Account number" value={interAccount} onChange={e => setInterAccount(e.target.value)} />
-                        </WireField>
-                        <div className="wire-intermediary-note">
-                          Some banks in certain countries require an intermediary (correspondent) bank to process international wires.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 4 — Transfer Details */}
-                <div className="wire-section">
-                  <div className="wire-section__header">
-                    <div className="wire-section__title">4. Transfer Details</div>
-                  </div>
-                  <div className="wire-section__body">
-
-                    {/* Transfer Speed */}
-                    <div style={{ marginBottom: 18 }}>
-                      <div className="wire-label-text" style={{ marginBottom: 10 }}>Transfer Speed</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {SPEEDS.map(s => (
-                          <label
-                            key={s.value}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 12,
-                              padding: '10px 14px',
-                              border: `1.5px solid ${wireSpeed === s.value ? 'var(--chase-blue)' : 'var(--gray-border)'}`,
-                              borderRadius: 4,
-                              background: wireSpeed === s.value ? '#F0F6FF' : 'var(--white)',
-                              cursor: 'pointer',
-                              transition: 'border-color 0.15s, background 0.15s',
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="wireSpeed"
-                              value={s.value}
-                              checked={wireSpeed === s.value}
-                              onChange={() => setWireSpeed(s.value)}
-                              style={{ accentColor: 'var(--chase-blue)', flexShrink: 0 }}
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, color: wireSpeed === s.value ? 'var(--chase-blue)' : 'var(--text-dark)' }}>
-                                {s.label}
-                              </div>
-                              <div style={{ fontSize: 12, color: 'var(--gray-text)' }}>{s.desc}</div>
-                            </div>
-                            {s.value === 'instant' && wireSpeed === 'instant' && (
-                              <span style={{
-                                fontSize: 12, fontWeight: 600, color: 'var(--success)',
-                                background: '#E8F5E9', padding: '3px 10px', borderRadius: 12,
-                              }}>
-                                ✓ Funds arrive immediately
-                              </span>
-                            )}
-                          </label>
-                        ))}
-                      </div>
+                      )}
                     </div>
-
-                    <WireField label="Purpose of Transfer (required by law)" err={wireErrors.wirePurpose}>
-                      <select
-                        className={`modal-select${wireErrors.wirePurpose ? ' wire-input--error' : ''}`}
-                        value={wirePurpose}
-                        onChange={e => { setWirePurpose(e.target.value); setWireErrors(p => ({ ...p, wirePurpose: '' })) }}
-                      >
-                        <option value="">Select purpose…</option>
-                        {PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </WireField>
-
-                    <WireField label="Reference / Message for Recipient">
-                      <input
-                        className="modal-input"
-                        placeholder="This message will appear on the recipient's bank statement"
-                        value={wireReference}
-                        maxLength={140}
-                        onChange={e => setWireReference(e.target.value)}
-                      />
-                      <div className="wire-char-counter">{wireReference.length}/140</div>
-                    </WireField>
-
-                    <WireField label="Your Reference (internal memo, optional)">
-                      <input
-                        className="modal-input"
-                        placeholder="Internal reference number or note"
-                        value={wireInternalRef}
-                        onChange={e => setWireInternalRef(e.target.value)}
-                      />
-                    </WireField>
                   </div>
                 </div>
 
-                {/* Section 5 — Compliance */}
-                <div className="wire-section">
-                  <div className="wire-section__header">
-                    <div className="wire-section__title">5. Compliance &amp; Legal</div>
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Account number</label>
+                    <input
+                      className={`cc-wire-input${wireErrors.accountNumber ? ' cc-wire-input--error' : ''}`}
+                      value={accountNumber}
+                      onChange={e => { setAccountNumber(e.target.value); setWireErrors(p => ({ ...p, accountNumber: '' })) }}
+                    />
+                    <div className="cc-wire-helper">Should not contain spaces or hyphens</div>
+                    {wireErrors.accountNumber && <div className="cc-wire-error-text">{wireErrors.accountNumber}</div>}
                   </div>
-                  <div className="wire-section__body">
-                    <div className="wire-compliance-box">
-                      Federal law requires us to collect information about wire transfers over $1,000. This information may be reported to government agencies.
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Verify account number</label>
+                    <div className="cc-wire-input-wrap">
+                      <input
+                        className={`cc-wire-input${wireErrors.confirmAccount ? ' cc-wire-input--error' : ''}`}
+                        value={confirmAccount}
+                        onChange={e => { setConfirmAccount(e.target.value); setWireErrors(p => ({ ...p, confirmAccount: '' })) }}
+                      />
+                      {confirmAccount && confirmAccount === accountNumber && <span style={{ color: '#006600', fontWeight: 700, flexShrink: 0 }}>✓</span>}
                     </div>
-
-                    {wireErrors.compliance && (
-                      <div className="modal-error">{wireErrors.compliance}</div>
-                    )}
-
-                    <label className="wire-checkbox-row">
-                      <input type="checkbox" checked={chk1} onChange={e => { setChk1(e.target.checked); setWireErrors(p => ({ ...p, compliance: '' })) }} />
-                      I confirm the recipient information is accurate and complete
-                    </label>
-                    <label className="wire-checkbox-row">
-                      <input type="checkbox" checked={chk2} onChange={e => { setChk2(e.target.checked); setWireErrors(p => ({ ...p, compliance: '' })) }} />
-                      I understand this transfer cannot be cancelled once submitted
-                    </label>
+                    {wireErrors.confirmAccount && <div className="cc-wire-error-text">{wireErrors.confirmAccount}</div>}
                   </div>
                 </div>
 
-                <button type="button" className="modal-submit" onClick={handleWireReview}>
-                  Review Transfer →
+                <button className="cc-wire-collapsible-link" onClick={() => setShowOtherRouting(p => !p)}>
+                  {showOtherRouting ? '⊖' : '⊕'} Add other routing instructions (optional)
                 </button>
+                {showOtherRouting && (
+                  <div className="cc-wire-field" style={{ background: '#F8F9FA', padding: '14px', borderRadius: 4, border: '1px solid #D8D8D8', marginBottom: 16 }}>
+                    <label className="cc-wire-label">Additional routing instructions</label>
+                    <input className="cc-wire-input" placeholder="e.g. intermediary bank information" />
+                  </div>
+                )}
+
+                <div className="cc-wire-btns">
+                  <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
+                  <button className="cc-wire-btn-next" onClick={() => { if (validateStep1()) setWireScreen('step2') }}>Next</button>
+                </div>
               </>
             )}
 
-            {/* ════════ STEP 2: REVIEW ════════ */}
-            {wireStep === 'review' && (
+            {/* ════════ STEP 2: RECIPIENT DETAILS ════════ */}
+            {wireScreen === 'step2' && (
               <>
-                <div className="wire-review-grid">
-                  <div className="wire-review-col">
-                    <div className="wire-review-col__title">Transfer Details</div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Amount Sent</span>
-                      <span className="wire-review-row__val">{fmtUSD(amountNum)} USD</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Recipient Receives</span>
-                      <span className="wire-review-row__val">
-                        {isUSD ? fmtUSD(amountNum) : fmtForeign(recipientReceives, wireCurrency)} {wireCurrency}
-                      </span>
-                    </div>
-                    {!isUSD && (
-                      <div className="wire-review-row">
-                        <span className="wire-review-row__key">Exchange Rate</span>
-                        <span className="wire-review-row__val">1 USD = {rate} {wireCurrency}</span>
-                      </div>
-                    )}
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Transfer Speed</span>
-                      <span className="wire-review-row__val">{speedLabel(wireSpeed)}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Purpose</span>
-                      <span className="wire-review-row__val">{wirePurpose}</span>
+                <div className="cc-wire-step-indicator">Step 2 of 3</div>
+                <div className="cc-wire-step-head">
+                  <div className="cc-wire-step-head__icon">👤</div>
+                  <div className="cc-wire-step-head__title">Add your recipient details</div>
+                  <div className="cc-wire-step-head__sub">If the name and address don't match the recipient's bank records, the bank may still deposit the funds to the account number you've entered.</div>
+                </div>
+
+                <div className="cc-wire-field">
+                  <label className="cc-wire-label">Recipient name</label>
+                  <input
+                    className={`cc-wire-input${wireErrors.recipientName ? ' cc-wire-input--error' : ''}`}
+                    value={recipientName} maxLength={35}
+                    onChange={e => { setRecipientName(e.target.value); setWireErrors(p => ({ ...p, recipientName: '' })) }}
+                  />
+                  <div className="cc-wire-char-counter">{35 - recipientName.length} of 35 characters remaining</div>
+                  {wireErrors.recipientName && <div className="cc-wire-error-text">{wireErrors.recipientName}</div>}
+                </div>
+
+                <div className="cc-wire-field">
+                  <label className="cc-wire-label">Nickname</label>
+                  <input className="cc-wire-input" value={nickname} maxLength={35} onChange={e => setNickname(e.target.value)} />
+                  <div className="cc-wire-char-counter">{35 - nickname.length} of 35 characters remaining</div>
+                </div>
+
+                <div className="cc-wire-field">
+                  <label className="cc-wire-label">Recipient country</label>
+                  <select className="cc-wire-select" value={recipientCountry} onChange={e => setRecipientCountry(e.target.value)}>
+                    {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Address</label>
+                    <div className="cc-wire-input-wrap">
+                      <input className="cc-wire-input" value={address} onChange={e => setAddress(e.target.value)} />
+                      <span className="cc-wire-input-search-icon">🔍</span>
                     </div>
                   </div>
-
-                  <div className="wire-review-col">
-                    <div className="wire-review-col__title">Recipient Details</div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Name</span>
-                      <span className="wire-review-row__val">{recipientName}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Bank</span>
-                      <span className="wire-review-row__val">{bankName}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">SWIFT / BIC</span>
-                      <span className="wire-review-row__val">{swiftCode}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">Routing Number</span>
-                      <span className="wire-review-row__val">{routingNumber}</span>
-                    </div>
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">{accountType === 'iban' ? 'IBAN' : 'Account'}</span>
-                      <span className="wire-review-row__val">
-                        {maskAccount(accountType === 'iban' ? ibanStripped : accountNumber)}
-                      </span>
-                    </div>
-                    {wireReference && (
-                      <div className="wire-review-row">
-                        <span className="wire-review-row__key">Reference</span>
-                        <span className="wire-review-row__val">{wireReference}</span>
-                      </div>
-                    )}
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Address line 2 (optional)</label>
+                    <input className="cc-wire-input" value={address2} onChange={e => setAddress2(e.target.value)} />
                   </div>
                 </div>
 
-                <div className="wire-warning-red">
-                  ⚠ Once submitted, transfers cannot be reversed. Chase is not responsible for delays caused by the recipient's bank.
+                <div className="cc-wire-grid-2">
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">City</label>
+                    <input className="cc-wire-input" value={city} onChange={e => setCity(e.target.value)} />
+                  </div>
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">State</label>
+                    <select className="cc-wire-select" value={recipientState} onChange={e => setRecipientState(e.target.value)}>
+                      <option value="">Select state</option>
+                      {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="wire-review-btns">
-                  <button type="button" className="wire-edit-btn" onClick={() => setWireStep('form')}>
-                    ← Edit Details
-                  </button>
-                  <button type="button" className="wire-confirm-btn" onClick={handleWireConfirm}>
-                    Confirm &amp; Submit Transfer
-                  </button>
+                <div className="cc-wire-field" style={{ maxWidth: 200 }}>
+                  <label className="cc-wire-label">Zip code</label>
+                  <input className="cc-wire-input" value={zipCode} maxLength={5} onChange={e => setZipCode(e.target.value.replace(/\D/g, ''))} />
+                </div>
+
+                <div className="cc-wire-field">
+                  <label className="cc-wire-label">Recipient group (optional)</label>
+                  <select className="cc-wire-select" defaultValue="">
+                    <option value="">Create group</option>
+                  </select>
+                  <button className="cc-wire-collapsible-link" style={{ marginTop: 6 }}>⊕ Create group</button>
+                </div>
+
+                <div className="cc-wire-btns">
+                  <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
+                  <button className="cc-wire-btn-back" onClick={() => setWireScreen('step1')}>Back</button>
+                  <button className="cc-wire-btn-next" onClick={() => { if (validateStep2()) setWireScreen('step3') }}>Next</button>
                 </div>
               </>
             )}
 
-            {/* ════════ STEP 3: DONE ════════ */}
-            {wireStep === 'done' && (
-              <div className="wire-done">
-                <div className="wire-done__icon">✓</div>
-                <div className="wire-done__title">National Transfer Submitted</div>
-                <div className="wire-done__ref">{wireRef}</div>
-                <div className="wire-done__delivery">⏱ {deliveryMsg(wireSpeed)}</div>
-                <div className="wire-done__email">You will receive an email confirmation at a•••••n@example.com</div>
+            {/* ════════ STEP 3: SCHEDULE THE WIRE ════════ */}
+            {wireScreen === 'step3' && (
+              <div className="cc-wire-step3-layout">
+                <div>
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Wire to</label>
+                    <select className="cc-wire-select">
+                      <option>{recipientName} (...{accountLast4 || '????'})</option>
+                    </select>
+                    <button className="cc-wire-collapsible-link" style={{ marginTop: 6 }}>⊕ Add a recipient</button>
+                  </div>
 
-                <div className="wire-done__summary">
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Recipient</span>
-                    <span className="wire-review-row__val">{recipientName}</span>
+                  <div className="cc-wire-recipient-card">
+                    <div className="cc-wire-recipient-card__row"><span>Recipient name</span><span>{recipientName}</span></div>
+                    <div className="cc-wire-recipient-card__row"><span>Bank name</span><span>{lookedUpBank || '—'}</span></div>
+                    <div className="cc-wire-recipient-card__row"><span>Wire routing number</span><span>{routingNumber}</span></div>
+                    <div className="cc-wire-recipient-card__row">
+                      <span>Account number</span>
+                      <span>{'•'.repeat(Math.max(0, accountNumber.length - 4))}{accountLast4}</span>
+                    </div>
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Amount Sent</span>
-                    <span className="wire-review-row__val">{fmtUSD(amountNum)}</span>
+
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Wire from</label>
+                    <select className="cc-wire-select">
+                      <option>COMMERCIAL CHECKING (...9193): {fmtUSD(currentBalance ?? 0)}</option>
+                    </select>
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Recipient Receives</span>
-                    <span className="wire-review-row__val">
-                      {isUSD ? fmtUSD(amountNum) : fmtForeign(recipientReceives, wireCurrency)} {wireCurrency}
-                    </span>
+
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Wire amount</label>
+                    <div className="cc-wire-input-wrap">
+                      <span style={{ color: '#666', marginRight: 4, fontSize: 15, flexShrink: 0 }}>$</span>
+                      <input
+                        className={`cc-wire-input${wireErrors.wireAmount ? ' cc-wire-input--error' : ''}`}
+                        type="number" min="0.01" step="0.01" placeholder="0.00"
+                        value={wireAmount}
+                        onChange={e => { setWireAmount(e.target.value); setWireErrors(p => ({ ...p, wireAmount: '' })) }}
+                      />
+                    </div>
+                    {wireErrors.wireAmount && <div className="cc-wire-error-text">{wireErrors.wireAmount}</div>}
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Bank</span>
-                    <span className="wire-review-row__val">{bankName}</span>
+
+                  <div className="cc-wire-field">
+                    <label className="cc-wire-label">Wire date</label>
+                    <input className="cc-wire-input" type="date" value={wireDate} onChange={e => setWireDate(e.target.value)} />
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">SWIFT / BIC</span>
-                    <span className="wire-review-row__val">{swiftCode}</span>
+
+                  <div className="cc-wire-toggle-row">
+                    <span className="cc-wire-toggle-label">Make this a repeating wire</span>
+                    <label className="cc-wire-toggle-switch">
+                      <input type="checkbox" checked={repeating} onChange={e => setRepeating(e.target.checked)} />
+                      <span className="cc-wire-toggle-slider"></span>
+                    </label>
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Routing Number</span>
-                    <span className="wire-review-row__val">{routingNumber}</span>
+
+                  <div className="cc-wire-additional-header" onClick={() => setShowAdditional(p => !p)}>
+                    <span className="cc-wire-additional-title">Additional information</span>
+                    <span style={{ color: '#666', fontSize: 12 }}>{showAdditional ? '▲' : '▼'}</span>
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Transfer Speed</span>
-                    <span className="wire-review-row__val">{speedLabel(wireSpeed)}</span>
+                  {showAdditional && (
+                    <>
+                      <div className="cc-wire-field">
+                        <label className="cc-wire-label">Additional routing info</label>
+                        <input className="cc-wire-input" value={additionalRoutingInfo} placeholder="None" onChange={e => setAdditionalRoutingInfo(e.target.value)} />
+                      </div>
+                      <div className="cc-wire-field">
+                        <label className="cc-wire-label">Message to recipient</label>
+                        <textarea className="cc-wire-input" style={{ resize: 'vertical', minHeight: 56 }} value={messageToRecipient} maxLength={140} placeholder="Maximum 140 characters. (optional)" onChange={e => setMessageToRecipient(e.target.value)} />
+                        <div className="cc-wire-char-counter">{messageToRecipient.length}/140</div>
+                      </div>
+                      <div className="cc-wire-field">
+                        <label className="cc-wire-label">Memo</label>
+                        <textarea className="cc-wire-input" style={{ resize: 'vertical', minHeight: 56 }} value={memo} maxLength={100} placeholder="Your recipient won't see this; it's for your records only. Maximum 100 characters (optional)" onChange={e => setMemo(e.target.value)} />
+                        <div className="cc-wire-char-counter">{memo.length}/100</div>
+                      </div>
+                    </>
+                  )}
+
+                  <div style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5 }}>
+                    After you have requested a wire transfer, we will send a status update to the primary email address that we have on file for your username.
                   </div>
-                  <div className="wire-review-row">
-                    <span className="wire-review-row__key">Delivery</span>
-                    <span className="wire-review-row__val">{deliveryMsg(wireSpeed)}</span>
+
+                  <div className="cc-wire-btns">
+                    <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
+                    <button className="cc-wire-btn-back" onClick={() => setWireScreen('step2')}>Back</button>
+                    <button className="cc-wire-btn-next" onClick={() => { if (validateStep3()) setWireScreen('review') }}>Next</button>
+                  </div>
+                </div>
+
+                {/* Wire Summary Panel */}
+                <div className="cc-wire-summary">
+                  <div className="cc-wire-summary__title">Wire Summary</div>
+                  <div className="cc-wire-summary__row">
+                    <span>Wire amount</span>
+                    <span>{amountNum > 0 ? fmtUSD(amountNum) : '—'} USD</span>
+                  </div>
+                  <div className="cc-wire-summary__row">
+                    <span>Wire transfer fee <span className="cc-wire-fee-info">ⓘ</span></span>
+                    <span style={{ fontSize: 12, color: '#555' }}>See analysis statement</span>
+                  </div>
+                  <hr className="cc-wire-summary__divider" />
+                  <div className="cc-wire-summary__total">
+                    <span>Total</span>
+                    <span>{amountNum > 0 ? fmtUSD(amountNum) : '—'} USD</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ════════ REVIEW ════════ */}
+            {wireScreen === 'review' && (
+              <>
+                <div className="cc-wire-review-title">Does everything look OK?</div>
+
+                <div className="cc-wire-review-section">
+                  <div className="cc-wire-review-section__title">Account details</div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire to</span>
+                    <span className="cc-wire-review-row__val">{recipientName} (...{accountLast4})</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire from</span>
+                    <span className="cc-wire-review-row__val">COMMERCIAL CHECKING (...9193)</span>
+                  </div>
+                </div>
+
+                <div className="cc-wire-review-section">
+                  <div className="cc-wire-review-section__title">Sender information</div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire date</span>
+                    <span className="cc-wire-review-row__val">{wireDate}</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire amount</span>
+                    <span className="cc-wire-review-row__val">{fmtUSD(amountNum)} USD (U.S. Dollars)</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Outgoing wire transfer fee <span className="cc-wire-fee-info">ⓘ</span></span>
+                    <span className="cc-wire-review-row__val">See analysis statement</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid #D8D8D8', paddingTop: 10, marginTop: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, color: '#1A1A1A', padding: '6px 0' }}>
+                      <span>Total</span>
+                      <span>{fmtUSD(amountNum)} USD (U.S. Dollars)</span>
+                    </div>
+                  </div>
+                  <div className="cc-wire-review-note">Your account activity will show separate charges for wire amount and wire transfer fee.</div>
+                </div>
+
+                <div className="cc-wire-review-section">
+                  <div className="cc-wire-review-section__title">Additional information</div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Additional routing info</span>
+                    <span className="cc-wire-review-row__val">{additionalRoutingInfo || 'None'}</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Message to recipient</span>
+                    <span className="cc-wire-review-row__val">{messageToRecipient || 'None'}</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Memo</span>
+                    <span className="cc-wire-review-row__val">{memo || 'None'}</span>
+                  </div>
+                </div>
+
+                <div className="cc-wire-btns">
+                  <button className="cc-wire-btn-cancel" onClick={onClose}>Cancel</button>
+                  <button className="cc-wire-btn-back" onClick={() => setWireScreen('step3')}>Back</button>
+                  <button className="cc-wire-btn-next" onClick={handleWireConfirm}>Schedule Wire</button>
+                </div>
+              </>
+            )}
+
+            {/* ════════ CONFIRMATION ════════ */}
+            {wireScreen === 'done' && (
+              <div className="cc-wire-done">
+                <div className="cc-wire-done__icon">✓</div>
+                <div className="cc-wire-done__title">Wire Transfer Scheduled</div>
+                <div className="cc-wire-done__ref">{wireRef}</div>
+                <div className="cc-wire-done__summary">
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire to</span>
+                    <span className="cc-wire-review-row__val">{recipientName} (...{accountLast4})</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Bank</span>
+                    <span className="cc-wire-review-row__val">{lookedUpBank || '—'}</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Routing number</span>
+                    <span className="cc-wire-review-row__val">{routingNumber}</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire amount</span>
+                    <span className="cc-wire-review-row__val">{fmtUSD(amountNum)} USD</span>
+                  </div>
+                  <div className="cc-wire-review-row">
+                    <span className="cc-wire-review-row__key">Wire date</span>
+                    <span className="cc-wire-review-row__val">{wireDate}</span>
                   </div>
                   {currentBalance != null && (
-                    <div className="wire-review-row">
-                      <span className="wire-review-row__key">New available balance</span>
-                      <span className="wire-review-row__val" style={{ color: 'var(--chase-blue)', fontWeight: 700 }}>
-                        {fmtUSD(currentBalance)}
-                      </span>
+                    <div className="cc-wire-review-row">
+                      <span className="cc-wire-review-row__key">New available balance</span>
+                      <span className="cc-wire-review-row__val" style={{ color: '#003087', fontWeight: 700 }}>{fmtUSD(currentBalance)}</span>
                     </div>
                   )}
                 </div>
-
-                <div className="wire-done__btns">
-                  <button type="button" className="wire-done__btn-outline" onClick={onClose}>
-                    Track this Transfer
-                  </button>
-                  <button type="button" className="wire-done__btn-primary" onClick={onClose}>
-                    Return to Dashboard
-                  </button>
+                <div className="cc-wire-done__btns">
+                  <button className="cc-wire-btn-outline" onClick={() => resetTab('wire')}>Schedule another wire</button>
+                  <button className="cc-wire-btn-primary" onClick={onClose}>Return to Dashboard</button>
                 </div>
               </div>
             )}
