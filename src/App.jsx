@@ -235,6 +235,7 @@ export default function App() {
     <Dashboard
       transactions={transactions}
       currentBalance={currentBalance}
+      seedBalance={seedBal}
       onLogout={handleLogout}
       onViewAll={() => setPage('transactions')}
       onAddTransaction={addTransaction}

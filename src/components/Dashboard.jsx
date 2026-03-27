@@ -56,11 +56,20 @@ const QuestionIcon = () => (
   <span className="balance-row__icon">?</span>
 )
 
-export default function Dashboard({ transactions, currentBalance, onLogout, onViewAll, onAddTransaction, onEditTransaction, onDeleteTransaction, onCancelPayment }) {
+export default function Dashboard({ transactions, currentBalance, seedBalance, onLogout, onViewAll, onAddTransaction, onEditTransaction, onDeleteTransaction, onCancelPayment }) {
   const [showDetails, setShowDetails] = useState(false)
   const [modal, setModal] = useState(null) // 'pay' | 'transfer'
   const [selectedTx, setSelectedTx] = useState(null)
   const [txModal, setTxModal] = useState(null) // 'details' | 'report'
+
+  // Build chronological balance map (oldest → newest) — same logic as History page
+  const chronological = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date))
+  let running = seedBalance
+  const balanceMap = {}
+  chronological.forEach(tx => {
+    running = parseFloat((running + tx.amount).toFixed(2))
+    balanceMap[tx.id] = running
+  })
 
   // Last 5 transactions (most recent date first)
   const recent = [...transactions]
@@ -232,7 +241,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                         <td className={tx.isCancellation ? 'txn-amount--debit' : (tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit')}>
                           {tx.isCancellation ? `-${formatAmount(tx.amount)}` : (tx.amount >= 0 ? '+' : '') + formatAmount(Math.abs(tx.amount))}
                         </td>
-                        <td>{formatAmount(currentBalance)}</td>
+                        <td>{formatAmount(balanceMap[tx.id] ?? 0)}</td>
                         <td>
                           <button
                             className="txn-see-details"
