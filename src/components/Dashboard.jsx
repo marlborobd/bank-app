@@ -232,7 +232,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                         <td className={tx.isCancellation ? 'txn-amount--debit' : (tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit')}>
                           {tx.isCancellation ? `-${formatAmount(tx.amount)}` : (tx.amount >= 0 ? '+' : '') + formatAmount(Math.abs(tx.amount))}
                         </td>
-                        <td>{formatAmount(tx.balance)}</td>
+                        <td>{formatAmount(currentBalance)}</td>
                         <td>
                           <button
                             className="txn-see-details"
