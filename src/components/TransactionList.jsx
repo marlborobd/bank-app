@@ -304,10 +304,13 @@ export default function TransactionList({
                         onClick={() => setSelectedTx(tx)}
                       >
                         <td>{fmt(tx.date)}</td>
-                        <td className="txn-desc txn-block__val--bold">{tx.description}</td>
+                        <td className="txn-desc txn-block__val--bold">
+                          {tx.description}
+                          {tx.isCancellation && <span className="txn-reversal-badge">Reversal</span>}
+                        </td>
                         <td>{tx.type}</td>
-                        <td className={tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red'}>
-                          {tx.amount >= 0 ? '+' : ''}{formatAmount(tx.amount)}
+                        <td className={tx.isCancellation ? 'txn-block__val--red' : (tx.amount >= 0 ? 'txn-block__val--green' : 'txn-block__val--red')}>
+                          {tx.isCancellation ? `-${formatAmount(tx.amount)}` : (tx.amount >= 0 ? '+' : '') + formatAmount(tx.amount)}
                         </td>
                         <td>{formatAmount(balanceMap[tx.id] ?? 0)}</td>
                       </tr>

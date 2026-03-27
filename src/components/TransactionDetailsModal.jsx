@@ -38,21 +38,29 @@ export default function TransactionDetailsModal({ tx, onClose, onReportProblem }
   const txnId = getTxnId(tx.id)
   const refNum = getRefNum(tx.id)
   const isCredit = tx.amount >= 0
+  const isCancellation = tx.isCancellation === true
 
   const bd = tx.bankDetails || {}
   const rows = [
-    { label: 'Status', value: <span className="txd-badge">Completed</span> },
+    {
+      label: 'Status',
+      value: isCancellation
+        ? <span className="txd-badge txd-badge--cancelled">Cancelled</span>
+        : <span className="txd-badge">Completed</span>
+    },
     { label: 'Date', value: fmtDate(tx.date) },
     { label: 'Time', value: tx.txnTime || '—' },
     { label: 'Description', value: tx.description },
-    { label: 'Category', value: tx.type || 'Other' },
+    { label: 'Category', value: isCancellation ? 'Cancellation Credit' : (tx.type || 'Other') },
     {
       label: 'Amount',
-      value: (
-        <span className={isCredit ? 'txd-amount--credit' : 'txd-amount--debit'}>
-          {isCredit ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
-        </span>
-      )
+      value: isCancellation
+        ? <span className="txd-amount--debit">-{formatAmount(tx.amount)}</span>
+        : (
+          <span className={isCredit ? 'txd-amount--credit' : 'txd-amount--debit'}>
+            {isCredit ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
+          </span>
+        )
     },
     { label: 'Account', value: 'REPO EQUIP LLC (...9193)' },
     { label: 'Transaction ID', value: txnId },

@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 
 const CATEGORIES = ['Shopping', 'Food & Dining', 'Income', 'Entertainment', 'Transfer', 'Bills & Utilities', 'Travel', 'Health', 'Other']
 
-export default function ReportProblemModal({ tx, onClose, onEdit, onDelete }) {
+function formatAmount(n) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n)
+}
+
+export default function ReportProblemModal({ tx, onClose, onEdit, onDelete, onCancelPayment }) {
   const [description, setDescription] = useState(tx.description)
   const [amount, setAmount] = useState(String(Math.abs(tx.amount)))
   const [type, setType] = useState(tx.amount >= 0 ? 'credit' : 'debit')
@@ -10,6 +14,7 @@ export default function ReportProblemModal({ tx, onClose, onEdit, onDelete }) {
   const [category, setCategory] = useState(tx.type || 'Other')
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -106,6 +111,35 @@ export default function ReportProblemModal({ tx, onClose, onEdit, onDelete }) {
             <div className="rp-confirm__btns">
               <button className="rp-confirm__yes" onClick={handleDelete}>Yes, delete</button>
               <button className="rp-confirm__cancel" onClick={() => setConfirmDelete(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="rp-section-divider" />
+
+        <div className="rp-section-title">↩ Credit from Cancelled Payment</div>
+
+        <div className="rp-cancel-info-box">
+          Selecting this option will generate a cancellation credit entry above this transaction. The original transaction remains unchanged.
+        </div>
+
+        {!showCancelConfirm ? (
+          <button className="rp-cancel-credit-btn" onClick={() => setShowCancelConfirm(true)}>
+            Apply Cancellation Credit
+          </button>
+        ) : (
+          <div className="rp-confirm">
+            <p className="rp-confirm__text">
+              This will add a +{formatAmount(Math.abs(tx.amount))} credit entry for the cancelled payment. Continue?
+            </p>
+            <div className="rp-confirm__btns">
+              <button
+                className="rp-confirm__yes rp-confirm__yes--green"
+                onClick={() => { onCancelPayment(tx); onClose() }}
+              >
+                Yes, apply
+              </button>
+              <button className="rp-confirm__cancel" onClick={() => setShowCancelConfirm(false)}>Cancel</button>
             </div>
           </div>
         )}

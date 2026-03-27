@@ -56,7 +56,7 @@ const QuestionIcon = () => (
   <span className="balance-row__icon">?</span>
 )
 
-export default function Dashboard({ transactions, currentBalance, onLogout, onViewAll, onAddTransaction, onEditTransaction, onDeleteTransaction }) {
+export default function Dashboard({ transactions, currentBalance, onLogout, onViewAll, onAddTransaction, onEditTransaction, onDeleteTransaction, onCancelPayment }) {
   const [showDetails, setShowDetails] = useState(false)
   const [modal, setModal] = useState(null) // 'pay' | 'transfer'
   const [selectedTx, setSelectedTx] = useState(null)
@@ -218,7 +218,10 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                       <tr key={tx.id}>
                         <td>{fmt(tx.date)}</td>
                         <td className="txn-desc">
-                          <div>{tx.description}</div>
+                          <div>
+                            {tx.description}
+                            {tx.isCancellation && <span className="txn-reversal-badge">Reversal</span>}
+                          </div>
                           <button
                             className="txn-report-link"
                             onClick={() => { setSelectedTx(tx); setTxModal('report') }}
@@ -226,8 +229,8 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
                             Report a problem
                           </button>
                         </td>
-                        <td className={tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit'}>
-                          {tx.amount >= 0 ? '+' : ''}{formatAmount(Math.abs(tx.amount))}
+                        <td className={tx.isCancellation ? 'txn-amount--debit' : (tx.amount >= 0 ? 'txn-amount--credit' : 'txn-amount--debit')}>
+                          {tx.isCancellation ? `-${formatAmount(tx.amount)}` : (tx.amount >= 0 ? '+' : '') + formatAmount(Math.abs(tx.amount))}
                         </td>
                         <td>{formatAmount(tx.balance)}</td>
                         <td>
@@ -270,6 +273,7 @@ export default function Dashboard({ transactions, currentBalance, onLogout, onVi
           onClose={() => { setTxModal(null); setSelectedTx(null) }}
           onEdit={(updatedTx) => { onEditTransaction(updatedTx); setTxModal(null); setSelectedTx(null) }}
           onDelete={(id) => { onDeleteTransaction(id); setTxModal(null); setSelectedTx(null) }}
+          onCancelPayment={(originalTx) => { onCancelPayment(originalTx); setTxModal(null); setSelectedTx(null) }}
         />
       )}
     </div>

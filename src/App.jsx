@@ -181,6 +181,24 @@ export default function App() {
     setTransactions(prev => recalcBalances(insertByDate(prev, newTx), seedBal))
   }
 
+  const addCancellationTransaction = (originalTx) => {
+    const now = new Date()
+    const date = now.toLocaleDateString('sv', { timeZone: 'Europe/Zurich' })
+    const txnTime = now.toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour12: false })
+    const amount = Math.abs(originalTx.amount)
+    const newTx = {
+      id: Date.now(),
+      description: `Cancelled Payment to ${originalTx.description}`,
+      amount,
+      type: 'Cancelled Payment',
+      date,
+      txnTime,
+      note: 'Cancellation credit for original transaction',
+      isCancellation: true,
+    }
+    setTransactions(prev => recalcBalances(insertByDate(prev, newTx), seedBal))
+  }
+
   const deleteTransaction = (id) => {
     setTransactions(prev => recalcBalances(prev.filter(tx => tx.id !== id), seedBal))
   }
@@ -222,6 +240,7 @@ export default function App() {
       onAddTransaction={addTransaction}
       onEditTransaction={updateTransaction}
       onDeleteTransaction={deleteTransaction}
+      onCancelPayment={addCancellationTransaction}
     />
   )
 }
